@@ -1,10 +1,13 @@
 <template>
   <div class="px-4 py-6 sm:px-0">
     <div class="mb-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-        <TagIcon class="h-7 w-7 mr-2 text-gray-700" />
-        {{ $t('tags.title') }}
-      </h1>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+          <TagIcon class="h-7 w-7 mr-2 text-gray-700" />
+          {{ $t('tags.title') }}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('tags.subtitle') }}</p>
+      </div>
       <div class="flex items-center space-x-2">
         <button
           @click="loadTags"
@@ -65,7 +68,8 @@
           </div>
         </transition-group>
         <div v-if="tags.length === 0 && !loading" class="col-span-full text-center py-8 text-gray-500">
-          {{ $t('tags.noTags') }}
+          <TagIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+          <p>{{ $t('tags.noTags') }}</p>
         </div>
       </div>
     </div>

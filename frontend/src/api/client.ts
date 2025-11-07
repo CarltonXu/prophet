@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/v1',
@@ -28,7 +28,10 @@ apiClient.interceptors.response.use(
     return response.data
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
+                          error.config?.url?.includes('/auth/register')
+    
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('access_token')
       window.location.href = '/login'
     }

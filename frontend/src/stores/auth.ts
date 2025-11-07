@@ -27,9 +27,12 @@ export const useAuthStore = defineStore('auth', () => {
         router.push('/')
         return true
       }
-      return false
+      throw new Error(response.message || 'Login failed')
     } catch (error: any) {
-      throw error.response?.data?.message || 'Login failed'
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          (typeof error === 'string' ? error : 'Login failed')
+      throw errorMessage
     }
   }
   
@@ -39,9 +42,13 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.code === 200) {
         return true
       }
-      return false
+      throw new Error(response.message || 'Registration failed')
     } catch (error: any) {
-      throw error.response?.data?.message || 'Registration failed'
+      // Extract error message from different error formats
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          (typeof error === 'string' ? error : 'Registration failed')
+      throw errorMessage
     }
   }
   

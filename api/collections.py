@@ -30,15 +30,36 @@ def get_collection_tasks():
     query = CollectionTask.query
     
     if status:
-        query = query.filter_by(status=status)
+        # Support comma-separated status values
+        status_list = [s.strip() for s in status.split(',')]
+        query = query.filter(CollectionTask.status.in_(status_list))
     
     query = query.order_by(desc(CollectionTask.created_at))
     
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
+    # Convert tasks to dict and identify platform sync tasks
+    tasks_data = []
+    for task in pagination.items:
+        task_dict = task.to_dict()
+        host_ids = task.get_host_ids()
+        # Check if this is a platform sync task (negative platform_id in host_ids)
+        if host_ids and len(host_ids) == 1 and host_ids[0] < 0:
+            platform_id = -host_ids[0]
+            task_dict['task_type'] = 'platform_sync'
+            task_dict['platform_id'] = platform_id
+            # Get platform name
+            from models import VirtualizationPlatform
+            platform = VirtualizationPlatform.query.get(platform_id)
+            if platform:
+                task_dict['platform_name'] = platform.name
+        else:
+            task_dict['task_type'] = 'collection'
+        tasks_data.append(task_dict)
+    
     return jsonify({
         'code': 200,
-        'data': [task.to_dict() for task in pagination.items],
+        'data': tasks_data,
         'pagination': {
             'page': page,
             'per_page': per_page,

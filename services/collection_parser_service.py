@@ -154,17 +154,37 @@ class CollectionParserService:
         
         for attempt in range(max_retries):
             try:
-                # Rollback any previous failed transaction
+                # Try to use the existing host object if it's already in the session
+                # This avoids unnecessary rollback which would undo uncommitted changes
+                use_existing_host = False
                 try:
-                    db.session.rollback()
+                    # Check if host is in the current session by trying to access its id
+                    if hasattr(host, 'id') and host.id == host_id:
+                        # Try to access an attribute to verify host is attached to session
+                        # If host is detached, this will raise an exception
+                        try:
+                            _ = host.hostname  # Access attribute to check if attached
+                            # Host is in session and attached, use it directly
+                            use_existing_host = True
+                        except Exception:
+                            # Host might be detached, need to re-query
+                            use_existing_host = False
                 except Exception:
-                    pass
+                    # Any error means we should re-query
+                    use_existing_host = False
                 
-                # Re-query host to ensure it's in the current session
-                # This is necessary in multi-threaded environments where each thread has its own session
-                host = Host.query.get(host_id)
-                if not host:
-                    raise ValueError(f"Host {host_id} not found")
+                if not use_existing_host:
+                    # Rollback any previous failed transaction and re-query
+                    # This is necessary in multi-threaded environments where each thread has its own session
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                    
+                    # Re-query host to ensure it's in the current session
+                    host = Host.query.get(host_id)
+                    if not host:
+                        raise ValueError(f"Host {host_id} not found")
                 
                 basic = parsed_data.get('basic', {})
                 os_info = parsed_data.get('os', {})

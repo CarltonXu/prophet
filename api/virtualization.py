@@ -77,18 +77,28 @@ def get_platform(platform_id):
         deleted_at=None
     ).all()
     
-    # Count ESXi hosts (physical hosts from this platform)
-    esxi_count = Host.query.filter_by(
-        source_platform_id=platform_id,
-        is_physical=False,
-        deleted_at=None
+    # Count ESXi hosts (ESXi hosts from this platform)
+    # ESXi hosts have: source_platform_id=platform_id, device_type='host', is_physical=False
+    esxi_count = Host.query.filter(
+        Host.source_platform_id == platform_id,
+        Host.device_type == 'host',
+        Host.is_physical == False,
+        Host.deleted_at == None
     ).count()
     
-    # Count VMs (non-physical hosts from this platform)
-    vm_count = Host.query.filter_by(
-        virtualization_platform_id=platform_id,
-        is_physical=False,
-        deleted_at=None
+    # Count VMs (VMs from this platform)
+    # VMs have: virtualization_platform_id=platform_id, is_physical=False
+    # We exclude ESXi hosts by checking device_type != 'host' (or device_type is NULL/None)
+    # ESXi hosts have device_type='host', VMs have device_type='vm' or None
+    from sqlalchemy import or_
+    vm_count = Host.query.filter(
+        Host.virtualization_platform_id == platform_id,
+        Host.is_physical == False,
+        or_(
+            Host.device_type != 'host',
+            Host.device_type == None
+        ),
+        Host.deleted_at == None
     ).count()
     
     # Calculate total resources
@@ -212,59 +222,63 @@ def test_platform(platform_id):
 @bp.route('/<int:platform_id>/sync', methods=['POST'])
 @jwt_required()
 def sync_platform(platform_id):
-    """Sync platform resources to hosts"""
+    """Sync platform resources to hosts (async with task tracking)"""
     platform = VirtualizationPlatform.query.filter_by(id=platform_id, deleted_at=None).first_or_404()
     user_id = get_current_user_id()
     
-    # Sync based on platform type
-    try:
-        if platform.type == 'vmware':
-            import tempfile
-            from prophet.collector.hosts.vmware import VMwareCollector
-            from services.vmware_sync_service import VMwareSyncService
-            
-            # Create temp directory for collection
-            temp_dir = tempfile.mkdtemp(prefix='vmware_sync_')
-            
-            try:
-                collector = VMwareCollector(
-                    ip=platform.host,
-                    username=platform.username,
-                    password=platform.get_password(),
-                    ssh_port=platform.port,
-                    key_path=None,
-                    output_path=temp_dir,
-                    os_type='VMWARE',
-                )
-                
-                # Connect and collect
-                collector.connect()
-                collected_data = collector.collect()
-                
-                # Sync to database
-                sync_service = VMwareSyncService(platform, user_id)
-                result = sync_service.sync_from_collector(collector, collected_data)
-                
-                return jsonify({
-                    'code': 200,
-                    'message': f'Platform synced successfully: {result["synced"]} created, {result["updated"]} updated, {result["failed"]} failed',
-                    'data': result
-                })
-            finally:
-                # Cleanup temp directory
-                import shutil
-                shutil.rmtree(temp_dir, ignore_errors=True)
-        else:
+    # Check if there's already a running sync task for this platform
+    # We'll identify platform sync tasks by using negative platform_id in host_ids
+    from models import CollectionTask
+    from sqlalchemy import and_
+    import json
+    
+    # Check for existing sync tasks (platform sync tasks use negative platform_id)
+    existing_tasks = CollectionTask.query.filter(
+        and_(
+            CollectionTask.status.in_(['pending', 'running']),
+            CollectionTask.created_by == user_id
+        )
+    ).all()
+    
+    # Check if any existing task is for this platform
+    for task in existing_tasks:
+        host_ids = task.get_host_ids()
+        # Platform sync tasks use negative platform_id to identify them
+        if host_ids and len(host_ids) == 1 and host_ids[0] == -platform_id:
             return jsonify({
                 'code': 400,
-                'message': f'Platform type {platform.type} sync not implemented yet'
+                'message': 'A sync task for this platform is already running',
+                'data': {
+                    'task_id': task.id,
+                    'status': task.status
+                }
             }), 400
-    except Exception as e:
-        logger.error(f"Platform sync failed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return jsonify({
-            'code': 400,
-            'message': f'Sync failed: {str(e)}'
-        }), 400
+    
+    # Create a collection task for tracking sync progress
+    # Use negative platform_id to identify platform sync tasks
+    task = CollectionTask(
+        concurrent_limit=1,  # Sync is sequential
+        status='pending',
+        created_by=user_id,
+    )
+    # Store negative platform_id to identify this as a platform sync task
+    task.set_host_ids([-platform_id])
+    db.session.add(task)
+    db.session.flush()
+    
+    # Start async sync task
+    from tasks.collector import sync_platform_resources_task
+    sync_platform_resources_task.delay(task.id, platform_id)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'code': 200,
+        'message': 'Platform sync task created',
+        'data': {
+            'task_id': task.id,
+            'status': task.status,
+            'platform_id': platform_id
+        }
+    })
 

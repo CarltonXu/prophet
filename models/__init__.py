@@ -10,7 +10,7 @@ from models.host import (
     Host, HostCredential, HostDetail, HostTag, HostTagRelation, HostRelationship,
     HostDisk, HostPartition, HostNetworkInterface
 )
-from models.platform import VirtualizationPlatform
+from models.platform import VirtualizationPlatform, PlatformTagRelation
 from models.application import Application, ApplicationHost
 from models.task import ScanTask, CollectionTask
 from models.system import SystemConfig, AuditLog

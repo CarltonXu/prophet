@@ -26,8 +26,9 @@
           <thead class="bg-gray-50 sticky top-0 z-20">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.taskId') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.status') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('scans.progress') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.taskType') }}</th>
+              <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-28">{{ $t('common.status') }}</th>
+              <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-40">{{ $t('scans.progress') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.completed') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.failed') }}</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.concurrent') }}</th>
@@ -37,7 +38,7 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!loading && tasks.length === 0" class="text-center py-8">
-              <td colspan="8" class="px-4 py-4 text-gray-500">
+              <td colspan="9" class="px-4 py-4 text-gray-500">
                 <CpuChipIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
                 <p>{{ $t('collections.noTasks') }}</p>
               </td>
@@ -52,31 +53,42 @@
             >
                   <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ task.id }}</td>
                   <td class="px-4 py-4 whitespace-nowrap text-sm">
+                    <span v-if="task.task_type === 'platform_sync'" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
+                      <CloudIcon class="h-3 w-3 mr-1" />
+                      {{ $t('collections.platformSync') }}
+                      <span v-if="task.platform_name" class="ml-1">({{ task.platform_name }})</span>
+                    </span>
+                    <span v-else class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                      <CpuChipIcon class="h-3 w-3 mr-1" />
+                      {{ $t('collections.collection') }}
+                    </span>
+                  </td>
+                  <td class="px-2 py-4 text-sm w-28">
                     <div class="flex flex-col">
                       <span
                         :class="getStatusClass(task.status)"
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                       >
                         <component
                           :is="getStatusIcon(task.status)"
-                          class="h-3.5 w-3.5 mr-1"
+                          class="h-3.5 w-3.5 mr-1 flex-shrink-0"
                         />
-                        {{ getStatusText(task.status) }}
+                        <span class="truncate">{{ getStatusText(task.status) }}</span>
                       </span>
-                      <span v-if="task.status === 'failed' && task.error_message" class="mt-1 text-xs text-red-600 truncate max-w-xs" :title="task.error_message">
-                        {{ task.error_message.split('\n')[0].substring(0, 50) }}{{ task.error_message.split('\n')[0].length > 50 ? '...' : '' }}
+                      <span v-if="task.status === 'failed' && task.error_message" class="mt-1 text-xs text-red-600 truncate" :title="task.error_message">
+                        {{ task.error_message.split('\n')[0].substring(0, 30) }}{{ task.error_message.split('\n')[0].length > 30 ? '...' : '' }}
                       </span>
                     </div>
                   </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm">
-                <div class="flex items-center">
-                  <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+              <td class="px-3 py-4 text-sm w-40">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-2.5 min-w-20">
                     <div
-                      class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                       :style="{ width: `${task.progress || 0}%` }"
                     ></div>
                   </div>
-                  <span class="text-sm font-medium text-gray-900">{{ task.progress || 0 }}%</span>
+                  <span class="text-xs font-medium text-gray-900 whitespace-nowrap">{{ task.progress || 0 }}%</span>
                 </div>
               </td>
               <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.completed_count || 0 }}</td>
@@ -282,7 +294,8 @@
             </span>
           </h3>
           <div v-if="taskResults.length === 0" class="text-center py-8 text-gray-500">
-            {{ $t('collections.noResults') }}
+            <DocumentTextIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+            <p>{{ $t('collections.noResults') }}</p>
           </div>
           <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -386,6 +399,7 @@ import { useRouter } from 'vue-router'
 const { t } = useI18n()
 import {
   CpuChipIcon,
+  CloudIcon,
   EyeIcon,
   XCircleIcon,
   ArrowPathIcon,
@@ -394,6 +408,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   PlayIcon,
+  DocumentTextIcon,
 } from '@heroicons/vue/24/outline'
 
 const toastStore = useToastStore()

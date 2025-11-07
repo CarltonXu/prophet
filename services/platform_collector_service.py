@@ -169,69 +169,210 @@ class PlatformCollectorService:
                 
                 collector.connect()
                 
-                # Collect platform data once (collects all VMs from platform)
-                # Then filter for only the hosts in this task
-                logger.info(f"Collecting data from platform {self.platform.name} for {len(hosts)} selected hosts")
-                collected_data = collector.collect()
+                # Only collect data for selected hosts, not all VMs
+                logger.info(f"Collecting data from platform {self.platform.name} for {len(hosts)} selected hosts only")
                 
-                if not collected_data:
-                    raise ValueError("No data collected from platform")
+                # Get VM objects from platform to query specific VMs
+                # We need to access the collector's content to query VMs
+                content = collector._content
+                if not content:
+                    raise ValueError("Failed to connect to platform")
                 
-                # Extract VMs info from collected data
-                root_key = list(collected_data.keys())[0] if collected_data else None
-                if not root_key:
-                    raise ValueError("Invalid collected data structure")
+                # Get container view for VMs
+                from pyVmomi import vim
+                container = content.rootFolder
+                viewType = [vim.VirtualMachine]
+                recursive = True
+                containerView = content.viewManager.CreateContainerView(
+                    container, viewType, recursive
+                )
                 
-                results = collected_data[root_key].get('results', {})
-                vms_info = results.get('vms', {})
+                # Get ESXi and cluster info once (needed for _get_vm_info)
+                esxi_obj = collector._get_content_obj(content, [vim.HostSystem])
+                cluster_obj = collector._get_content_obj(content, [vim.ClusterComputeResource])
                 
-                # Create a mapping of VM identifiers to VM data for quick lookup
-                vm_map = {}
-                for vmid, vm_info in vms_info.items():
-                    vm_ip = vm_info.get('ipAddress', '')
-                    vm_name = vm_info.get('name', '')
-                    vm_uuid = vm_info.get('uuid', '')
-                    # Index by IP, name, and UUID for quick lookup
-                    if vm_ip:
-                        vm_map[vm_ip] = vm_info
-                    if vm_name:
-                        vm_map[vm_name] = vm_info
-                    if vm_uuid:
-                        vm_map[vm_uuid] = vm_info
+                # Initialize ESXi info dictionary (required by _get_vm_info)
+                # This populates collector._esxis_info which is needed when _get_vm_info accesses it
+                logger.info("Initializing ESXi host information...")
+                collector._get_esxi_info()
+                collector._get_vcenter_info()  # Also initialize vCenter info if needed
+                logger.info(f"Initialized ESXi info for {len(collector._esxis_info)} ESXi hosts")
                 
-                # Process each selected host
+                # Only collect VM info for selected hosts
+                # First pass: identify matching VMs (quick check without detailed collection)
+                matching_vms = []
+                vm_objects = containerView.view
+                
+                # Log selected hosts for debugging
+                logger.info(f"Selected hosts to match: {len(hosts)}")
+                for host in hosts:
+                    logger.info(f"  - Host ID: {host.id}, IP: {host.ip}, Hostname: {host.hostname}, MAC: {host.mac}")
+                
+                total_vms = len(vm_objects)
+                logger.info(f"Total VMs on platform: {total_vms}")
+                
+                for vm in vm_objects:
+                    # Quick check: get basic info to match
+                    try:
+                        # Try to get VM info - handle cases where VM is not accessible
+                        vm_ip = ''
+                        vm_name = ''
+                        vm_uuid = ''
+                        
+                        try:
+                            vm_name = getattr(vm.config, 'name', '') or ''
+                        except Exception:
+                            pass
+                        
+                        try:
+                            vm_uuid = getattr(vm.config, 'uuid', '') or ''
+                            # Also try instanceUuid
+                            if not vm_uuid:
+                                vm_uuid = getattr(vm.config, 'instanceUuid', '') or ''
+                        except Exception:
+                            pass
+                        
+                        try:
+                            vm_ip = getattr(vm.summary.guest, 'ipAddress', '') or ''
+                            # Also try to get IP from network info if available
+                            if not vm_ip and hasattr(vm.summary, 'guest') and hasattr(vm.summary.guest, 'net'):
+                                for net in vm.summary.guest.net or []:
+                                    if hasattr(net, 'ipAddress') and net.ipAddress:
+                                        vm_ip = net.ipAddress
+                                        break
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        # Skip VMs that can't be accessed
+                        logger.debug(f"Skip VM due to access error: {e}")
+                        continue
+                    
+                    # Check if this VM matches any selected host
+                    matches = False
+                    matched_host = None
+                    match_reason = None
+                    
+                    for host in hosts:
+                        # Match by UUID (most reliable)
+                        if vm_uuid and host.mac and vm_uuid.lower() == host.mac.lower():
+                            matches = True
+                            matched_host = host
+                            match_reason = f"UUID match: {vm_uuid}"
+                            break
+                        
+                        # Match by hostname (case-insensitive)
+                        if vm_name and host.hostname and vm_name.lower() == host.hostname.lower():
+                            matches = True
+                            matched_host = host
+                            match_reason = f"Hostname match: {vm_name}"
+                            break
+                        
+                        # Match by IP (case-insensitive, handle multiple IPs)
+                        if vm_ip and host.ip:
+                            # Check if VM IP matches host IP (exact match)
+                            if vm_ip.lower() == host.ip.lower():
+                                matches = True
+                                matched_host = host
+                                match_reason = f"IP match: {vm_ip}"
+                                break
+                            
+                            # Also check if host IP is in VM's IP list (for VMs with multiple IPs)
+                            # This is handled above with the network check
+                        
+                        # Match by hostname containing or being contained (loose match)
+                        if vm_name and host.hostname:
+                            vm_name_lower = vm_name.lower()
+                            hostname_lower = host.hostname.lower()
+                            if vm_name_lower in hostname_lower or hostname_lower in vm_name_lower:
+                                matches = True
+                                matched_host = host
+                                match_reason = f"Hostname partial match: {vm_name} <-> {host.hostname}"
+                                break
+                    
+                    # Only collect detailed info for matching VMs
+                    if matches:
+                        logger.info(f"Found matching VM: {vm_name} (IP: {vm_ip}, UUID: {vm_uuid}) - {match_reason}")
+                        matching_vms.append((vm, matched_host))
+                    else:
+                        logger.debug(f"VM {vm_name} (IP: {vm_ip}, UUID: {vm_uuid}) does not match any selected host")
+                
+                logger.info(f"Found {len(matching_vms)} matching VMs out of {total_vms} total VMs")
+                
+                if not matching_vms:
+                    # Log detailed info about why no matches were found
+                    logger.error("No matching VMs found. Details:")
+                    logger.error(f"  Selected hosts: {len(hosts)}")
+                    for host in hosts:
+                        logger.error(f"    - Host {host.id}: IP={host.ip}, Hostname={host.hostname}, MAC={host.mac}")
+                    logger.error(f"  Total VMs on platform: {total_vms}")
+                    # Log first few VMs for comparison
+                    sample_count = min(5, total_vms)
+                    logger.error(f"  Sample VMs on platform (first {sample_count}):")
+                    for i, vm in enumerate(list(vm_objects)[:sample_count]):
+                        try:
+                            vm_name = getattr(vm.config, 'name', 'unknown')
+                            vm_uuid = getattr(vm.config, 'uuid', 'unknown')
+                            vm_ip = ''
+                            try:
+                                vm_ip = getattr(vm.summary.guest, 'ipAddress', '') or 'N/A'
+                            except:
+                                vm_ip = 'N/A'
+                            logger.error(f"    - VM: {vm_name}, IP: {vm_ip}, UUID: {vm_uuid}")
+                        except:
+                            logger.error(f"    - VM: (unable to read)")
+                
+                # Second pass: collect detailed info only for matching VMs
+                vms_info = {}
+                vm_to_host_map = {}  # Map VM ID to host for later processing
+                
+                for vm, matched_host in matching_vms:
+                    try:
+                        vm_name = getattr(vm.config, 'name', '') or 'unknown'
+                        vmid = getattr(vm.config, "instanceUuid", getattr(
+                            vm.config, "summary.instanceUuid", vm.config.uuid))
+                        
+                        logger.info(f"Collecting detailed data for selected VM: {vm_name} (matched with host ID: {matched_host.id})")
+                        vm_info = collector._get_vm_info(esxi_obj, cluster_obj, vm)
+                        vms_info[vmid] = vm_info
+                        vm_to_host_map[vmid] = matched_host  # Store mapping
+                        logger.info(f"Successfully collected data for VM: {vm_name}")
+                    except Exception as e:
+                        vm_name = getattr(vm.config, 'name', 'unknown')
+                        logger.error(f"Failed to collect data for VM {vm_name}: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                        continue
+                
+                containerView.Destroy()
+                
+                if not vms_info:
+                    raise ValueError("No matching VMs found for selected hosts")
+                
+                # Process each selected host using the VM-to-host mapping we created
                 completed = 0
                 failed = 0
+                processed_host_ids = set()
                 
-                for host in hosts:
+                # Process VMs that were matched
+                for vmid, vm_data in vms_info.items():
+                    if vmid not in vm_to_host_map:
+                        logger.warning(f"VM {vmid} not in host mapping, skipping")
+                        continue
+                    
+                    host = vm_to_host_map[vmid]
+                    processed_host_ids.add(host.id)
+                    
                     try:
-                        # Find matching VM data
-                        vm_data = None
-                        # Try to match by IP first, then hostname, then MAC/UUID
-                        if host.ip in vm_map:
-                            vm_data = vm_map[host.ip]
-                        elif host.hostname and host.hostname in vm_map:
-                            vm_data = vm_map[host.hostname]
-                        elif host.mac and host.mac in vm_map:
-                            vm_data = vm_map[host.mac]
-                        else:
-                            # Fallback: iterate through all VMs to find match
-                            for vmid, vm_info in vms_info.items():
-                                vm_ip = vm_info.get('ipAddress', '')
-                                vm_name = vm_info.get('name', '')
-                                vm_uuid = vm_info.get('uuid', '')
-                                
-                                if (host.ip == vm_ip or 
-                                    (host.hostname and host.hostname == vm_name) or 
-                                    (host.mac and host.mac == vm_uuid)):
-                                    vm_data = vm_info
-                                    break
+                        logger.info(f"Processing host {host.id} (IP: {host.ip}, Hostname: {host.hostname}) with matched VM data")
                         
-                        if not vm_data:
-                            logger.warning(f"VM not found in collected data for host {host.ip}")
-                            failed += 1
-                            self.update_progress(failed=failed)
-                            continue
+                        # Extract ESXi host name from vm_data
+                        # vm_data contains: {"esxi_host": {esxi_name: {...}}, ...}
+                        esxi_host_name = None
+                        esxi_host_info = vm_data.get('esxi_host', {})
+                        if esxi_host_info and isinstance(esxi_host_info, dict):
+                            # Get the first (and only) key which is the ESXi host name
+                            esxi_host_name = list(esxi_host_info.keys())[0] if esxi_host_info else None
+                            logger.info(f"VM {vm_data.get('name', 'unknown')} is on ESXi host: {esxi_host_name}")
                         
                         # Parse and update host data
                         vm_data_for_parser = {
@@ -255,6 +396,13 @@ class PlatformCollectorService:
                         host.virtualization_platform_id = self.platform.id
                         # Set status to collecting first, then completed
                         host.collection_status = 'collecting'
+                        
+                        # Store ESXi host name in vendor field for tree view grouping
+                        # Format: "ESXi: <host_name>" so get_hosts_tree can extract it
+                        if esxi_host_name:
+                            host.vendor = f"ESXi: {esxi_host_name}"
+                            logger.debug(f"Set VM {vm_data.get('name', 'unknown')} vendor to: {host.vendor}")
+                        
                         db.session.commit()  # Commit immediately for real-time updates
                         
                         # Update to completed
@@ -299,7 +447,15 @@ class PlatformCollectorService:
                         
                         failed += 1
                         self.update_progress(failed=failed)
-                        continue
+                
+                # Check for hosts that were selected but didn't match any VM
+                for host in hosts:
+                    if host.id not in processed_host_ids:
+                        logger.warning(f"Host {host.id} (IP: {host.ip}, Hostname: {host.hostname}, MAC: {host.mac}) was selected but no matching VM was found on platform")
+                        failed += 1
+                        host.collection_status = 'failed'
+                        self.update_progress(failed=failed)
+                        db.session.commit()
                 
             finally:
                 # Cleanup temp directory

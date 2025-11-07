@@ -21,5 +21,11 @@ export const tagsApi = {
   
   removeHostTag: (hostId: number, tagId: number) =>
     apiClient.delete(`/tags/hosts/${hostId}/${tagId}`),
+  
+  addPlatformTags: (platformId: number, tagIds: number[]) =>
+    apiClient.post(`/tags/platforms/${platformId}`, { tag_ids: tagIds }),
+  
+  removePlatformTag: (platformId: number, tagId: number) =>
+    apiClient.delete(`/tags/platforms/${platformId}/${tagId}`),
 }
 

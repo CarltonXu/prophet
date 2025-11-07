@@ -53,6 +53,7 @@ class VMwareSyncService:
             root_key = list(collected_data.keys())[0] if collected_data else None
             if not root_key:
                 logger.error("Invalid collected data structure")
+                logger.error(f"Collected data keys: {list(collected_data.keys()) if collected_data else 'None'}")
                 return {
                     'synced': 0,
                     'updated': 0,
@@ -60,9 +61,12 @@ class VMwareSyncService:
                     'total': 0
                 }
             
+            logger.info(f"Extracting data from root_key: {root_key}")
             results = collected_data[root_key].get('results', {})
             server_info = results.get('server_info', {})
             vms_info = results.get('vms', {})
+            logger.info(f"Extracted server_info type: {type(server_info)}, keys: {list(server_info.keys()) if isinstance(server_info, dict) else 'N/A'}")
+            logger.info(f"Extracted vms_info type: {type(vms_info)}, count: {len(vms_info) if isinstance(vms_info, dict) else 'N/A'}")
             
             # Get ESXi hosts from server_info
             esxi_hosts = []
@@ -71,6 +75,7 @@ class VMwareSyncService:
                 if 'esxi' in server_info:
                     # vCenter case
                     esxis = server_info['esxi']
+                    logger.info(f"Found vCenter with {len(esxis) if isinstance(esxis, dict) else 0} ESXi hosts")
                     for esxi_name, esxi_info in esxis.items():
                         esxi_hosts.append({
                             'name': esxi_name,
@@ -78,11 +83,46 @@ class VMwareSyncService:
                         })
                 else:
                     # ESXi case - server_info is the ESXi info itself
+                    logger.info(f"Found ESXi server with {len(server_info)} ESXi hosts")
                     for esxi_name, esxi_info in server_info.items():
                         esxi_hosts.append({
                             'name': esxi_name,
                             'info': esxi_info
                         })
+            
+            logger.info(f"Total ESXi hosts to sync: {len(esxi_hosts)}")
+            
+            # If no ESXi hosts found, try alternative data extraction
+            if len(esxi_hosts) == 0 and len(vms_info) == 0:
+                logger.warning("No ESXi hosts or VMs found in collected_data, trying alternative extraction from collector")
+                # Try to get data from collector's internal state
+                alt_data = self._get_data_from_collector(collector)
+                if alt_data:
+                    logger.info("Found data using alternative extraction method")
+                    root_key = list(alt_data.keys())[0] if alt_data else None
+                    if root_key:
+                        results = alt_data[root_key].get('results', {})
+                        server_info = results.get('server_info', {})
+                        vms_info = results.get('vms', {})
+                        # Re-extract ESXi hosts
+                        esxi_hosts = []
+                        if isinstance(server_info, dict):
+                            if 'esxi' in server_info:
+                                esxis = server_info['esxi']
+                                logger.info(f"Found vCenter with {len(esxis) if isinstance(esxis, dict) else 0} ESXi hosts (alternative)")
+                                for esxi_name, esxi_info in esxis.items():
+                                    esxi_hosts.append({
+                                        'name': esxi_name,
+                                        'info': esxi_info
+                                    })
+                            else:
+                                logger.info(f"Found ESXi server with {len(server_info)} ESXi hosts (alternative)")
+                                for esxi_name, esxi_info in server_info.items():
+                                    esxi_hosts.append({
+                                        'name': esxi_name,
+                                        'info': esxi_info
+                                    })
+                        logger.info(f"After alternative extraction: {len(esxi_hosts)} ESXi hosts, {len(vms_info) if isinstance(vms_info, dict) else 0} VMs")
             
             # Get VMs from vms_info
             vms = []
@@ -91,15 +131,32 @@ class VMwareSyncService:
                     if isinstance(vm_data, dict):
                         vms.append(vm_data)
             
-            # Sync ESXi hosts
+            logger.info(f"Total VMs to sync: {len(vms)}")
+            
+            # Sync ESXi hosts (each commit immediately in _sync_esxi_host)
+            logger.info(f"Starting to sync {len(esxi_hosts)} ESXi hosts...")
             for esxi in esxi_hosts:
+                logger.info(f"Syncing ESXi host: {esxi.get('name', 'unknown')}")
                 self._sync_esxi_host(esxi)
             
-            # Sync VMs
+            logger.info(f"Completed syncing ESXi hosts. Synced: {self.synced_count}, Updated: {self.updated_count}, Failed: {self.failed_count}")
+            
+            # Sync VMs (each commit immediately in _sync_vm)
+            logger.info(f"Starting to sync {len(vms)} VMs...")
             for vm_data in vms:
+                vm_name = vm_data.get('name', 'unknown')
+                logger.info(f"Syncing VM: {vm_name}")
                 self._sync_vm(vm_data)
             
-            db.session.commit()
+            logger.info(f"Completed syncing VMs. Total synced: {self.synced_count}, Updated: {self.updated_count}, Failed: {self.failed_count}")
+            
+            # All hosts are already committed individually, no need for final commit
+            # But we keep this for safety in case of any remaining uncommitted changes
+            try:
+                db.session.commit()
+            except Exception:
+                # If nothing to commit, that's fine
+                pass
             
             return {
                 'synced': self.synced_count,
@@ -150,6 +207,7 @@ class VMwareSyncService:
         try:
             esxi_name = esxi['name']
             esxi_info = esxi['info']
+            logger.info(f"Processing ESXi host: {esxi_name}")
             
             # Extract ESXi summary info
             esxi_summary = esxi_info.get('esxi_info', {}) if isinstance(esxi_info, dict) else esxi_info
@@ -218,6 +276,10 @@ class VMwareSyncService:
             )
             db.session.add(detail)
             
+            # Commit immediately for real-time database updates
+            db.session.commit()
+            logger.info(f"Successfully synced ESXi host {esxi_name} to database (host.id={host.id}, ip={host.ip})")
+            
         except Exception as e:
             esxi_name = esxi.get('name', 'unknown')
             error_msg = str(e)
@@ -237,11 +299,21 @@ class VMwareSyncService:
         try:
             vm_name = vm_info.get('name', '')
             vm_uuid = vm_info.get('uuid', '')
+            logger.info(f"Processing VM: {vm_name} (UUID: {vm_uuid})")
             
             if not vm_name:
                 logger.warning("VM info missing name, skipping")
                 self.failed_count += 1
                 return
+            
+            # Extract ESXi host name from vm_info
+            # vm_info contains: {"esxi_host": {esxi_name: {...}}, ...}
+            esxi_host_name = None
+            esxi_host_info = vm_info.get('esxi_host', {})
+            if esxi_host_info and isinstance(esxi_host_info, dict):
+                # Get the first (and only) key which is the ESXi host name
+                esxi_host_name = list(esxi_host_info.keys())[0] if esxi_host_info else None
+                logger.info(f"VM {vm_name} is on ESXi host: {esxi_host_name}")
             
             # Prepare VM data in format expected by CollectionParserService
             # CollectionParserService expects: {root_key: {results: {...}, os_type: ...}}
@@ -337,13 +409,38 @@ class VMwareSyncService:
                 # Update existing host
                 self.updated_count += 1
             
+            # Ensure host is committed before calling update_host_from_parsed_data
+            # Because update_host_from_parsed_data does a rollback at the start, we need to commit first
+            # to ensure the host exists in the database, otherwise the rollback will undo our new host creation
+            if not host.id:
+                # This shouldn't happen, but if host doesn't have an ID, flush to get it
+                db.session.flush()
+            
+            # Commit host to database before calling update_host_from_parsed_data
+            # This ensures the host exists even if update_host_from_parsed_data does a rollback
+            db.session.commit()
+            
+            # Refresh host to ensure it's in the current session after commit
+            db.session.refresh(host)
+            
             # Update host from parsed data (this will update all fields including disks, partitions, networks)
+            # Note: update_host_from_parsed_data will rollback and re-query, but host is now committed
             parser_service.update_host_from_parsed_data(host, parsed_data)
             
-            # Ensure source is set
+            # Ensure source is set and device_type is set for VM
             host.source = 'platform'
             host.source_platform_id = self.platform.id
             host.virtualization_platform_id = self.platform.id
+            # Set device_type to 'vm' to distinguish from ESXi hosts
+            if not host.device_type or host.device_type == 'host':
+                host.device_type = 'vm'
+            host.is_physical = False  # Ensure VM is marked as virtual
+            
+            # Store ESXi host name in vendor field for tree view grouping
+            # Format: "ESXi: <host_name>" so get_hosts_tree can extract it
+            if esxi_host_name:
+                host.vendor = f"ESXi: {esxi_host_name}"
+                logger.debug(f"Set VM {vm_name} vendor to: {host.vendor}")
             
             # Record collection history (no longer storing raw JSON)
             detail = HostDetail(
@@ -354,6 +451,10 @@ class VMwareSyncService:
                 collected_at=datetime.utcnow(),
             )
             db.session.add(detail)
+            
+            # Commit immediately for real-time database updates
+            db.session.commit()
+            logger.info(f"Successfully synced VM {vm_name} to database (host.id={host.id})")
             
         except Exception as e:
             vm_name = vm_info.get('name', 'unknown')

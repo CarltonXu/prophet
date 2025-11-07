@@ -30,22 +30,36 @@ def get_hosts():
     
     # Filters
     search = request.args.get('search')
+    search_field = request.args.get('search_field', 'all')  # all, ip, hostname, mac, vendor
     os_type = request.args.get('os_type')
     device_type = request.args.get('device_type')
     is_physical = request.args.get('is_physical')
     platform_id = request.args.get('platform_id')
     tag_id = request.args.get('tag_id')
+    collection_status = request.args.get('collection_status')
+    source = request.args.get('source')
     
     query = Host.query.filter(Host.deleted_at == None)
     
     if search:
-        query = query.filter(
-            or_(
-                Host.hostname.contains(search),
-                Host.ip.contains(search),
-                Host.mac.contains(search)
+        if search_field == 'ip':
+            query = query.filter(Host.ip.contains(search))
+        elif search_field == 'hostname':
+            query = query.filter(Host.hostname.contains(search))
+        elif search_field == 'mac':
+            query = query.filter(Host.mac.contains(search))
+        elif search_field == 'vendor':
+            query = query.filter(Host.vendor.contains(search))
+        else:
+            # Default: search all fields
+            query = query.filter(
+                or_(
+                    Host.hostname.contains(search),
+                    Host.ip.contains(search),
+                    Host.mac.contains(search),
+                    Host.vendor.contains(search)
+                )
             )
-        )
     
     if os_type:
         query = query.filter_by(os_type=os_type)
@@ -61,6 +75,12 @@ def get_hosts():
     
     if tag_id:
         query = query.join(HostTagRelation).filter(HostTagRelation.tag_id == tag_id)
+    
+    if collection_status:
+        query = query.filter_by(collection_status=collection_status)
+    
+    if source:
+        query = query.filter_by(source=source)
     
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
@@ -170,6 +190,46 @@ def delete_host(host_id):
     return jsonify({
         'code': 200,
         'message': 'Host deleted'
+    })
+
+
+@bp.route('/batch/delete', methods=['POST'])
+@jwt_required()
+@validate_json(['host_ids'])
+def batch_delete_hosts():
+    """Batch delete hosts"""
+    data = request.json
+    host_ids = data.get('host_ids', [])
+    
+    if not host_ids:
+        return jsonify({
+            'code': 400,
+            'message': 'No host IDs provided'
+        }), 400
+    
+    deleted_count = 0
+    failed_ids = []
+    
+    for host_id in host_ids:
+        try:
+            host = Host.query.filter_by(id=host_id, deleted_at=None).first()
+            if host:
+                host.deleted_at = datetime.utcnow()
+                deleted_count += 1
+            else:
+                failed_ids.append(host_id)
+        except Exception as e:
+            failed_ids.append(host_id)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'code': 200,
+        'message': f'Deleted {deleted_count} hosts',
+        'data': {
+            'deleted_count': deleted_count,
+            'failed_ids': failed_ids
+        }
     })
 
 

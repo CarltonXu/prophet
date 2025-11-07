@@ -10,6 +10,7 @@ export interface Platform {
   password?: string
   region?: string
   extra_config?: Record<string, any>
+  tags?: Array<{ id: number; name: string; color?: string; description?: string }>
   statistics?: {
     esxi_count?: number
     vm_count?: number

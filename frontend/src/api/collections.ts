@@ -16,6 +16,9 @@ export interface CollectionTask {
   created_at: string
   started_at?: string
   completed_at?: string
+  task_type?: 'collection' | 'platform_sync'
+  platform_id?: number
+  platform_name?: string
 }
 
 export const collectionsApi = {
@@ -25,7 +28,7 @@ export const collectionsApi = {
     status?: string
   }) => apiClient.get('/collections', { params }),
   
-  getCollectionTask: (id: number) => apiClient.get(`/collections/${id}`),
+  getCollectionTask: (taskId: number) => apiClient.get(`/collections/${taskId}`),
   
   cancelCollectionTask: (id: number) => apiClient.post(`/collections/${id}/cancel`),
   

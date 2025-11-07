@@ -1,10 +1,13 @@
 <template>
   <div class="px-4 py-6 sm:px-0">
     <div class="mb-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-        <MagnifyingGlassIcon class="h-7 w-7 mr-2 text-gray-700" />
-        {{ $t('scans.title') }}
-      </h1>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+          <MagnifyingGlassIcon class="h-7 w-7 mr-2 text-gray-700" />
+          {{ $t('scans.title') }}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('scans.subtitle') }}</p>
+      </div>
       <div class="flex items-center space-x-2">
         <button
           @click="loadTasks(1)"
@@ -41,7 +44,10 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!loading && tasks.length === 0" class="text-center py-8">
-              <td colspan="7" class="px-4 py-4 text-gray-500">{{ $t('scans.noTasks') }}</td>
+              <td colspan="7" class="px-4 py-4 text-gray-500">
+                <MagnifyingGlassIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                <p>{{ $t('scans.noTasks') }}</p>
+              </td>
             </tr>
             <tr 
               v-else 
@@ -199,6 +205,7 @@
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAC</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('scans.vendor') }}</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">OS</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('scans.ports') }}</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('common.operation') }}</th>
               </tr>
             </thead>
@@ -208,7 +215,21 @@
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.hostname || '-' }}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.mac || '-' }}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.vendor || '-' }}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.os || '-' }}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.os_type || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">
+                  <div v-if="result.scan_ports" class="flex flex-col gap-1">
+                    <span v-if="result.scan_ports.tcp && result.scan_ports.tcp.length > 0" class="text-xs">
+                      <span class="font-medium text-blue-600">TCP:</span> {{ result.scan_ports.tcp.join(', ') }}
+                    </span>
+                    <span v-if="result.scan_ports.udp && result.scan_ports.udp.length > 0" class="text-xs">
+                      <span class="font-medium text-green-600">UDP:</span> {{ result.scan_ports.udp.join(', ') }}
+                    </span>
+                    <span v-if="(!result.scan_ports.tcp || result.scan_ports.tcp.length === 0) && (!result.scan_ports.udp || result.scan_ports.udp.length === 0)" class="text-xs text-gray-400">
+                      -
+                    </span>
+                  </div>
+                  <span v-else class="text-xs text-gray-400">-</span>
+                </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
                   <button
                     @click="addToHosts(result)"
@@ -368,7 +389,7 @@ const addToHosts = async (result: any) => {
       hostname: result.hostname,
       mac: result.mac,
       vendor: result.vendor,
-      os_type: result.os?.toLowerCase(),
+      os_type: (result.os_type || result.os)?.toLowerCase(),
     })
     toastStore.success(t('scans.addSuccess'))
   } catch (error: any) {
@@ -384,7 +405,7 @@ const batchAddToHosts = async () => {
       hostname: result.hostname,
       mac: result.mac,
       vendor: result.vendor,
-      os_type: result.os?.toLowerCase(),
+      os_type: (result.os_type || result.os)?.toLowerCase(),
     }))
     await hostsApi.batchCreateHosts(hosts)
     toastStore.success(t('scans.batchAddSuccess', { count: hosts.length }))

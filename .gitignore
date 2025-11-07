@@ -4,6 +4,7 @@
 *.swo
 *.db
 .tox
+.env
 .eggs/*
 *.egg-info
 .venv/*

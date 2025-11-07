@@ -8,24 +8,70 @@
         </h1>
         <p class="mt-1 text-sm text-gray-500">{{ $t('platforms.subtitle') }}</p>
       </div>
+      <div class="flex items-center gap-2">
+        <!-- View Toggle -->
+        <div class="flex items-center border border-gray-300 rounded-md overflow-hidden">
           <button
-            @click="loadPlatforms"
-            :disabled="loading"
-            class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            @click="viewMode = 'card'"
+            :class="viewMode === 'card' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            class="px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            :title="$t('platforms.cardView')"
           >
-            <ArrowPathIcon :class="{ 'animate-spin': loading }" class="h-4 w-4 mr-2" />
-            {{ $t('common.refresh') }}
+            <Squares2X2Icon class="h-4 w-4" />
           </button>
           <button
-            @click="openCreateModal"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            @click="viewMode = 'table'"
+            :class="viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            class="px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 border-l border-gray-300"
+            :title="$t('platforms.tableView')"
           >
-            <PlusIcon class="h-4 w-4 mr-2" />
-            {{ $t('platforms.addPlatform') }}
+            <Bars3Icon class="h-4 w-4" />
           </button>
         </div>
+
+        <!-- Batch Actions Menu (when platforms selected) -->
+        <div v-if="selectedPlatforms.length > 0" class="relative">
+          <Menu as="div" class="relative inline-block text-left">
+            <MenuButton class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+              <span class="mr-2">{{ $t('common.batchOperation') }} ({{ selectedPlatforms.length }})</span>
+              <ChevronDownIcon class="h-4 w-4" />
+            </MenuButton>
+            <MenuItems class="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <div class="py-1">
+                <MenuItem v-slot="{ active }">
+                  <button
+                    @click="openBatchTagManagementModal"
+                    :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
+                  >
+                    <TagIcon class="h-4 w-4 mr-3 text-gray-400" />
+                    {{ $t('platforms.batchManageTags') }}
+                  </button>
+                </MenuItem>
+              </div>
+            </MenuItems>
+          </Menu>
+        </div>
+        
+        <button
+          @click="loadPlatforms"
+          :disabled="loading"
+          class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          <ArrowPathIcon :class="{ 'animate-spin': loading }" class="h-4 w-4 mr-2" />
+          {{ $t('common.refresh') }}
+        </button>
+        <button
+          @click="openCreateModal"
+          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <PlusIcon class="h-4 w-4 mr-2" />
+          {{ $t('platforms.addPlatform') }}
+        </button>
+      </div>
+    </div>
     
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 relative">
+    <!-- Card View -->
+    <div v-if="viewMode === 'card'" class="grid grid-cols-1 gap-6 lg:grid-cols-2 relative">
       <LoadingOverlay :loading="loading" :text="$t('common.loading')" />
       <transition-group
         name="fade"
@@ -35,8 +81,18 @@
         <div
           v-for="platform in platforms"
           :key="platform.id"
-          class="bg-white shadow rounded-lg overflow-hidden transition-opacity"
+          class="bg-white shadow rounded-lg overflow-hidden transition-opacity relative"
+          :class="{ 'ring-2 ring-blue-500': selectedPlatforms.includes(platform.id!) }"
         >
+        <!-- Selection Checkbox -->
+        <div class="absolute top-2 right-2 z-10" @click.stop>
+          <input
+            type="checkbox"
+            :value="platform.id"
+            v-model="selectedPlatforms"
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-5 w-5"
+          />
+        </div>
         <!-- Platform Header -->
         <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
           <div class="flex items-center justify-between">
@@ -56,6 +112,53 @@
             <span>{{ platform.username }}</span>
             <span v-if="platform.region" class="mx-2">•</span>
             <span v-if="platform.region">{{ platform.region }}</span>
+          </div>
+          <!-- Tags -->
+          <div v-if="platform.tags && platform.tags.length > 0" class="mt-3 flex flex-wrap gap-1">
+            <span
+              v-for="tag in platform.tags"
+              :key="tag.id"
+              class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white"
+              :style="{ backgroundColor: tag.color || '#6B7280' }"
+            >
+              {{ tag.name }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Sync Progress (if syncing) -->
+        <div v-if="getPlatformSyncStatus(platform.id)" class="px-6 py-4 bg-blue-50 border-b border-blue-200">
+          <h4 class="text-sm font-medium text-blue-900 mb-2 flex items-center">
+            <ArrowPathIcon class="h-4 w-4 mr-1 animate-spin" />
+            {{ $t('platforms.syncing') }}
+          </h4>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs text-blue-800">
+              <span>{{ $t('scans.progress') }}: {{ getPlatformSyncStatus(platform.id)?.progress || 0 }}%</span>
+              <span v-if="getPlatformSyncStatus(platform.id)?.total_count">
+                {{ getPlatformSyncStatus(platform.id)?.completed_count || 0 }} / {{ getPlatformSyncStatus(platform.id)?.total_count }} {{ $t('collections.completed') }}
+              </span>
+              <span v-else>
+                {{ getPlatformSyncStatus(platform.id)?.completed_count || 0 }} {{ $t('collections.completed') }}
+              </span>
+            </div>
+            <div class="w-full bg-blue-200 rounded-full h-2">
+              <div
+                class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                :style="{ width: `${getPlatformSyncStatus(platform.id)?.progress || 0}%` }"
+              ></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-blue-700">
+              <span>
+                {{ $t('collections.completed') }}: <span class="font-semibold text-green-700">{{ getPlatformSyncStatus(platform.id)?.completed_count || 0 }}</span>
+              </span>
+              <span>
+                {{ $t('collections.failed') }}: <span class="font-semibold text-red-700">{{ getPlatformSyncStatus(platform.id)?.failed_count || 0 }}</span>
+              </span>
+              <span v-if="getPlatformSyncStatus(platform.id)?.total_count">
+                {{ $t('collections.total') }}: <span class="font-semibold">{{ getPlatformSyncStatus(platform.id)?.total_count }}</span>
+              </span>
+            </div>
           </div>
         </div>
         
@@ -134,6 +237,14 @@
             </button>
             <button
               v-if="platform.id"
+              @click="openTagManagementModal(platform)"
+              class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            >
+              <TagIcon class="h-4 w-4 mr-1" />
+              {{ $t('platforms.manageTags') }}
+            </button>
+            <button
+              v-if="platform.id"
               @click="testPlatform(platform.id)"
               :disabled="testingPlatformId === platform.id"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
@@ -144,11 +255,19 @@
             <button
               v-if="platform.id"
               @click="syncPlatform(platform.id)"
-              :disabled="syncingPlatformId === platform.id"
+              :disabled="syncingPlatformId === platform.id || getPlatformSyncStatus(platform.id)"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
             >
-              <ArrowPathIcon class="h-4 w-4 mr-1" />
-              {{ syncingPlatformId === platform.id ? $t('platforms.syncing') : $t('platforms.syncResources') }}
+              <ArrowPathIcon :class="{ 'animate-spin': syncingPlatformId === platform.id || getPlatformSyncStatus(platform.id)?.status === 'running' }" class="h-4 w-4 mr-1" />
+              <span v-if="getPlatformSyncStatus(platform.id)">
+                {{ $t('platforms.syncing') }} ({{ getPlatformSyncStatus(platform.id).progress }}%)
+              </span>
+              <span v-else-if="syncingPlatformId === platform.id">
+                {{ $t('platforms.syncing') }}
+              </span>
+              <span v-else>
+                {{ $t('platforms.syncResources') }}
+              </span>
             </button>
             <button
               @click="showSyncSettings(platform)"
@@ -173,6 +292,188 @@
         <CloudIcon class="h-16 w-16 mx-auto text-gray-300 mb-4" />
         <p class="text-lg font-medium">{{ $t('platforms.noPlatforms') }}</p>
         <p class="text-sm mt-1">{{ $t('platforms.addPlatformHint') }}</p>
+      </div>
+    </div>
+
+    <!-- Table View -->
+    <div v-else class="bg-white shadow sm:rounded-md overflow-hidden relative">
+      <LoadingOverlay :loading="loading" :text="$t('common.loading')" />
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  :checked="allPlatformsSelected"
+                  @change="toggleSelectAllPlatforms"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.platformName') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.platformType') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.host') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.username') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.esxiHosts') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.vms') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.cpuCores') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.memoryGB') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.storageGB') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('platforms.tags') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-if="platforms.length === 0 && !loading" class="text-center">
+              <td colspan="12" class="px-6 py-12 text-gray-500">
+                <CloudIcon class="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <p class="text-lg font-medium">{{ $t('platforms.noPlatforms') }}</p>
+                <p class="text-sm mt-1">{{ $t('platforms.addPlatformHint') }}</p>
+              </td>
+            </tr>
+            <tr
+              v-for="platform in platforms"
+              :key="platform.id"
+              class="hover:bg-gray-50 transition-colors"
+              :class="{ 'bg-blue-50 hover:bg-blue-100': selectedPlatforms.includes(platform.id!) }"
+            >
+              <td class="px-6 py-4 whitespace-nowrap" @click.stop>
+                <input
+                  type="checkbox"
+                  :value="platform.id"
+                  v-model="selectedPlatforms"
+                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <CloudIcon class="h-5 w-5 text-blue-600 mr-2" />
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">{{ platform.name }}</div>
+                    <div v-if="getPlatformSyncStatus(platform.id)" class="text-xs text-blue-600 mt-1">
+                      <ArrowPathIcon class="h-3 w-3 inline animate-spin mr-1" />
+                      {{ $t('platforms.syncing') }} ({{ getPlatformSyncStatus(platform.id)?.progress || 0 }}%)
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ platform.type.toUpperCase() }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div class="flex items-center">
+                  <ServerIcon class="h-4 w-4 mr-1" />
+                  <span>{{ platform.host }}:{{ platform.port || 443 }}</span>
+                </div>
+                <div v-if="platform.region" class="text-xs text-gray-400 mt-1">{{ platform.region }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div class="flex items-center">
+                  <UserIcon class="h-4 w-4 mr-1" />
+                  <span>{{ platform.username }}</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ platform.statistics?.esxi_count || 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ platform.statistics?.vm_count || 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ platform.statistics?.total_cpu_cores || 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ platform.statistics?.total_memory_gb || 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ platform.statistics?.total_storage_gb || 0 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm" @click.stop>
+                <div class="flex flex-wrap gap-1 items-center">
+                  <span
+                    v-for="tag in platform.tags"
+                    :key="tag.id"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white group/tag relative"
+                    :style="{ backgroundColor: tag.color || '#6B7280' }"
+                  >
+                    {{ tag.name }}
+                    <button
+                      v-if="platform.id"
+                      @click.stop="removePlatformTag(platform.id, tag.id!)"
+                      class="ml-1 opacity-0 group-hover/tag:opacity-100 hover:bg-black/20 rounded p-0.5 transition-opacity"
+                      :title="$t('platforms.removeTag')"
+                    >
+                      <XMarkIcon class="h-3 w-3" />
+                    </button>
+                  </span>
+                  <button
+                    v-if="platform.id"
+                    @click.stop="openTagManagementModal(platform)"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    :title="$t('platforms.manageTags')"
+                  >
+                    <TagIcon class="h-3 w-3 mr-1" />
+                    {{ $t('platforms.manageTags') }}
+                  </button>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex items-center space-x-2">
+                  <button
+                    v-if="platform.id"
+                    @click.stop="viewPlatform(platform.id)"
+                    class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                    :title="$t('platforms.view')"
+                  >
+                    <EyeIcon class="h-4 w-4" />
+                  </button>
+                  <button
+                    @click.stop="editPlatform(platform)"
+                    class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+                    :title="$t('common.edit')"
+                  >
+                    <PencilIcon class="h-4 w-4" />
+                  </button>
+                  <button
+                    v-if="platform.id"
+                    @click.stop="testPlatform(platform.id)"
+                    :disabled="testingPlatformId === platform.id"
+                    class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 disabled:opacity-50"
+                    :title="$t('platforms.testConnection')"
+                  >
+                    <SignalIcon class="h-4 w-4" />
+                  </button>
+                  <button
+                    v-if="platform.id"
+                    @click.stop="syncPlatform(platform.id)"
+                    :disabled="syncingPlatformId === platform.id || getPlatformSyncStatus(platform.id)"
+                    class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 disabled:opacity-50"
+                    :title="$t('platforms.syncResources')"
+                  >
+                    <ArrowPathIcon :class="{ 'animate-spin': syncingPlatformId === platform.id || getPlatformSyncStatus(platform.id)?.status === 'running' }" class="h-4 w-4" />
+                  </button>
+                  <button
+                    @click.stop="showSyncSettings(platform)"
+                    class="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
+                    :title="$t('platforms.syncSettings')"
+                  >
+                    <Cog6ToothIcon class="h-4 w-4" />
+                  </button>
+                  <button
+                    v-if="platform.id"
+                    @click.stop="deletePlatform(platform.id)"
+                    class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                    :title="$t('common.delete')"
+                  >
+                    <TrashIcon class="h-4 w-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -459,17 +760,135 @@
       :title="$t('platforms.confirmDelete')"
       :message="confirmMessage"
     />
+
+    <!-- Tag Management Modal -->
+    <Modal :open="showTagManagementModal" @close="closeTagManagementModal" :title="$t('platforms.manageTags')" max-width="md">
+      <div v-if="tagManagementTarget" class="space-y-4">
+        <div>
+          <p class="text-sm text-gray-600 mb-3">
+            {{ $t('platforms.manageTagsFor') }}: <span class="font-semibold">{{ tagManagementTarget.name }}</span>
+          </p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ $t('platforms.selectTags') }}</label>
+          <div class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
+            <label
+              v-for="tag in availableTags"
+              :key="tag.id"
+              class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+            >
+              <input
+                type="checkbox"
+                :value="tag.id"
+                v-model="selectedTagIds"
+                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div class="flex items-center flex-1">
+                <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0" :style="{ backgroundColor: tag.color || '#6B7280' }"></div>
+                <span class="text-sm text-gray-900">{{ tag.name }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div v-if="tagManagementTarget.tags && tagManagementTarget.tags.length > 0">
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ $t('platforms.currentTags') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="tag in tagManagementTarget.tags"
+              :key="tag.id"
+              class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white"
+              :style="{ backgroundColor: tag.color || '#6B7280' }"
+            >
+              {{ tag.name }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          @click="closeTagManagementModal"
+          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        >
+          {{ $t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          @click="savePlatformTags"
+          :disabled="saving"
+          class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50"
+        >
+          {{ saving ? $t('settings.saving') : $t('common.save') }}
+        </button>
+      </template>
+    </Modal>
+
+    <!-- Batch Tag Management Modal -->
+    <Modal :open="showBatchTagManagementModal" @close="closeBatchTagManagementModal" :title="$t('platforms.batchManageTags')" max-width="md">
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm text-gray-600 mb-3">
+            {{ $t('platforms.batchManageTagsFor') }}: <span class="font-semibold">{{ selectedPlatforms.length }} {{ $t('platforms.selectedPlatforms') }}</span>
+          </p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ $t('platforms.selectTags') }}</label>
+          <div class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
+            <label
+              v-for="tag in availableTags"
+              :key="tag.id"
+              class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+            >
+              <input
+                type="checkbox"
+                :value="tag.id"
+                v-model="batchSelectedTagIds"
+                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div class="flex items-center flex-1">
+                <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0" :style="{ backgroundColor: tag.color || '#6B7280' }"></div>
+                <span class="text-sm text-gray-900">{{ tag.name }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p class="text-xs text-blue-800">
+            {{ $t('platforms.batchTagHint') }}
+          </p>
+        </div>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          @click="closeBatchTagManagementModal"
+          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        >
+          {{ $t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          @click="saveBatchPlatformTags"
+          :disabled="saving || batchSelectedTagIds.length === 0"
+          class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50"
+        >
+          {{ saving ? $t('settings.saving') : $t('common.save') }}
+        </button>
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { platformsApi, type Platform } from '@/api/platforms'
+import { tagsApi } from '@/api/tags'
 import Modal from '@/components/Modal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { useToastStore } from '@/stores/toast'
 import { useI18n } from 'vue-i18n'
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import {
   CloudIcon,
   PlusIcon,
@@ -486,6 +905,11 @@ import {
   TrashIcon,
   ArrowPathIcon,
   XCircleIcon,
+  Squares2X2Icon,
+  Bars3Icon,
+  TagIcon,
+  XMarkIcon,
+  ChevronDownIcon,
   } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -493,6 +917,7 @@ const toastStore = useToastStore()
 
 const platforms = ref<Platform[]>([])
 const loading = ref(false)
+const viewMode = ref<'card' | 'table'>('card')
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
 const platformForm = ref<Partial<Platform>>({})
@@ -511,6 +936,24 @@ const syncSettings = ref({
   sync_frequency: 'daily',
   sync_time: '02:00',
 })
+const platformSyncTasks = ref<Map<number, any>>(new Map()) // platform_id -> task info
+let syncStatusInterval: ReturnType<typeof setInterval> | null = null
+const showTagManagementModal = ref(false)
+const tagManagementTarget = ref<Platform | null>(null)
+const selectedTagIds = ref<number[]>([])
+const availableTags = ref<Array<{id: number, name: string, color?: string}>>([])
+const selectedPlatforms = ref<number[]>([])
+const showBatchTagManagementModal = ref(false)
+const batchSelectedTagIds = ref<number[]>([])
+
+interface PlatformSyncTaskInfo {
+  task_id: number
+  status: string
+  progress: number
+  completed_count: number
+  failed_count: number
+  total_count?: number | null
+}
 
 const loadPlatforms = async () => {
   loading.value = true
@@ -677,18 +1120,21 @@ const syncPlatform = async (id: number) => {
   try {
     const response: any = await platformsApi.syncPlatform(id)
     if (response && response.code === 200 && response.data) {
-      const result = response.data
-      if (result.failed_items && result.failed_items.length > 0) {
-        toastStore.warning(t('platforms.syncWithErrors', { count: result.failed_items.length }))
-        // Store sync result in platform detail for display
-        if (platformDetail.value && platformDetail.value.id === id) {
-          platformDetail.value.last_sync_result = result
-        }
-      } else {
-        toastStore.success(t('platforms.syncSuccess'))
+      const taskData = response.data
+      // Store task info for this platform
+      if (taskData.task_id) {
+        platformSyncTasks.value.set(id, {
+          task_id: taskData.task_id,
+          status: taskData.status,
+          progress: 0,
+          completed_count: 0,
+          failed_count: 0,
+          total_count: null
+        })
       }
-    } else {
-      toastStore.success(t('platforms.syncSuccess'))
+      toastStore.success(t('platforms.syncTaskCreated'))
+      // Start polling for sync status
+      startSyncStatusPolling()
     }
     loadPlatforms()
   } catch (error: any) {
@@ -696,6 +1142,89 @@ const syncPlatform = async (id: number) => {
   } finally {
     syncingPlatformId.value = null
   }
+}
+
+const startSyncStatusPolling = () => {
+  // Clear existing interval
+  if (syncStatusInterval) {
+    clearInterval(syncStatusInterval)
+  }
+  
+  // Poll every 2 seconds for sync status
+  syncStatusInterval = setInterval(async () => {
+    await checkSyncStatus()
+  }, 2000)
+}
+
+const checkSyncStatus = async () => {
+  if (platformSyncTasks.value.size === 0) {
+    if (syncStatusInterval) {
+      clearInterval(syncStatusInterval)
+      syncStatusInterval = null
+    }
+    return
+  }
+  
+  try {
+    const { collectionsApi } = await import('@/api/collections')
+    
+    for (const [platformId, taskInfo] of platformSyncTasks.value.entries()) {
+      try {
+        const response: any = await collectionsApi.getCollectionTask(taskInfo.task_id)
+        if (response && response.code === 200 && response.data) {
+          const task = response.data
+          taskInfo.status = task.status
+          taskInfo.progress = task.progress || 0
+          taskInfo.completed_count = task.completed_count || 0
+          taskInfo.failed_count = task.failed_count || 0
+          taskInfo.total_count = task.total_count || null
+          
+          // Refresh platform statistics during sync to show real-time updates
+          if (task.status === 'running' || task.status === 'pending') {
+            // Update statistics for the platform being synced
+            const platform = platforms.value.find(p => p.id === platformId)
+            if (platform) {
+              try {
+                const detailRes: any = await platformsApi.getPlatform(platformId)
+                if (detailRes && detailRes.code === 200 && detailRes.data?.statistics) {
+                  platform.statistics = detailRes.data.statistics
+                }
+              } catch (e) {
+                // Ignore errors - not critical
+                console.warn(`Failed to refresh statistics for platform ${platformId}:`, e)
+              }
+            }
+          }
+          
+          // If task is completed or failed, stop polling for this task
+          if (task.status === 'completed' || task.status === 'failed') {
+            if (task.status === 'completed') {
+              toastStore.success(t('platforms.syncSuccess'))
+            } else {
+              toastStore.error(t('platforms.syncFailed') + (task.error_message ? `: ${task.error_message}` : ''))
+            }
+            platformSyncTasks.value.delete(platformId)
+            loadPlatforms() // Refresh platform list with latest statistics
+          }
+        }
+      } catch (error) {
+        // Task might not exist anymore, remove it
+        platformSyncTasks.value.delete(platformId)
+      }
+    }
+    
+    // Stop polling if no active tasks
+    if (platformSyncTasks.value.size === 0 && syncStatusInterval) {
+      clearInterval(syncStatusInterval)
+      syncStatusInterval = null
+    }
+  } catch (error) {
+    console.error('Failed to check sync status:', error)
+  }
+}
+
+const getPlatformSyncStatus = (platformId: number): PlatformSyncTaskInfo | undefined => {
+  return platformSyncTasks.value.get(platformId)
 }
 
 const deletePlatform = async (id: number) => {
@@ -720,9 +1249,190 @@ const handleConfirm = () => {
   confirmAction.value = null
 }
 
+const loadTags = async () => {
+  try {
+    const response: any = await tagsApi.getTags()
+    if (response && response.code === 200) {
+      availableTags.value = response.data || []
+    } else if (Array.isArray(response)) {
+      availableTags.value = response
+    } else if (response && response.data) {
+      availableTags.value = response.data
+    }
+  } catch (error: any) {
+    console.warn('Failed to load tags:', error)
+  }
+}
+
+const openTagManagementModal = (platform: Platform) => {
+  tagManagementTarget.value = platform
+  selectedTagIds.value = platform.tags?.map((tag: any) => tag.id!).filter(Boolean) || []
+  showTagManagementModal.value = true
+}
+
+const closeTagManagementModal = () => {
+  showTagManagementModal.value = false
+  tagManagementTarget.value = null
+  selectedTagIds.value = []
+}
+
+const savePlatformTags = async () => {
+  if (!tagManagementTarget.value || !tagManagementTarget.value.id) return
+  
+  saving.value = true
+  try {
+    const platformId = tagManagementTarget.value.id
+    const currentTagIds = tagManagementTarget.value.tags?.map((tag: any) => tag.id!).filter(Boolean) || []
+    
+    // Remove tags that are not in selectedTagIds
+    for (const tagId of currentTagIds) {
+      if (!selectedTagIds.value.includes(tagId)) {
+        await tagsApi.removePlatformTag(platformId, tagId)
+      }
+    }
+    
+    // Add tags that are in selectedTagIds but not in currentTagIds
+    const tagsToAdd = selectedTagIds.value.filter(tagId => !currentTagIds.includes(tagId))
+    if (tagsToAdd.length > 0) {
+      await tagsApi.addPlatformTags(platformId, tagsToAdd)
+    }
+    
+    toastStore.success(t('platforms.tagsUpdated'))
+    closeTagManagementModal()
+    loadPlatforms()
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('messages.saveFailed'))
+  } finally {
+    saving.value = false
+  }
+}
+
+const removePlatformTag = async (platformId: number, tagId: number) => {
+  try {
+    await tagsApi.removePlatformTag(platformId, tagId)
+    toastStore.success(t('platforms.tagRemoved'))
+    loadPlatforms()
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('messages.operationFailed'))
+  }
+}
+
+const allPlatformsSelected = computed(() => {
+  return platforms.value.length > 0 && selectedPlatforms.value.length === platforms.value.length && platforms.value.every(p => p.id && selectedPlatforms.value.includes(p.id))
+})
+
+const toggleSelectAllPlatforms = () => {
+  if (allPlatformsSelected.value) {
+    selectedPlatforms.value = []
+  } else {
+    selectedPlatforms.value = platforms.value.map(p => p.id!).filter(Boolean)
+  }
+}
+
+const openBatchTagManagementModal = () => {
+  if (selectedPlatforms.value.length === 0) {
+    toastStore.warning(t('platforms.noPlatformsSelected'))
+    return
+  }
+  batchSelectedTagIds.value = []
+  showBatchTagManagementModal.value = true
+}
+
+const closeBatchTagManagementModal = () => {
+  showBatchTagManagementModal.value = false
+  batchSelectedTagIds.value = []
+}
+
+const saveBatchPlatformTags = async () => {
+  if (selectedPlatforms.value.length === 0 || batchSelectedTagIds.value.length === 0) {
+    return
+  }
+  
+  saving.value = true
+  try {
+    let successCount = 0
+    let failCount = 0
+    
+    // Add selected tags to all selected platforms
+    for (const platformId of selectedPlatforms.value) {
+      try {
+        await tagsApi.addPlatformTags(platformId, batchSelectedTagIds.value)
+        successCount++
+      } catch (error: any) {
+        console.error(`Failed to add tags to platform ${platformId}:`, error)
+        failCount++
+      }
+    }
+    
+    if (successCount > 0) {
+      toastStore.success(t('platforms.batchTagsAdded', { count: successCount }))
+    }
+    if (failCount > 0) {
+      toastStore.error(t('platforms.batchTagsFailed', { count: failCount }))
+    }
+    
+    closeBatchTagManagementModal()
+    selectedPlatforms.value = []
+    loadPlatforms()
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('messages.operationFailed'))
+  } finally {
+    saving.value = false
+  }
+}
+
 onMounted(() => {
   loadPlatforms()
+  loadTags()
+  // Load existing sync tasks on mount
+  loadSyncTasks()
+  // Start polling for sync status
+  startSyncStatusPolling()
 })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (syncStatusInterval) {
+    clearInterval(syncStatusInterval)
+    syncStatusInterval = null
+  }
+})
+
+const loadSyncTasks = async () => {
+  try {
+    const { collectionsApi } = await import('@/api/collections')
+    // Load pending and running tasks separately
+    const [pendingRes, runningRes] = await Promise.all([
+      collectionsApi.getCollectionTasks({ status: 'pending' }).catch(() => null),
+      collectionsApi.getCollectionTasks({ status: 'running' }).catch(() => null)
+    ])
+    
+    const tasks: any[] = []
+    const pendingData: any = pendingRes as any
+    const runningData: any = runningRes as any
+    if (pendingData && pendingData.code === 200 && pendingData.data) {
+      tasks.push(...pendingData.data)
+    }
+    if (runningData && runningData.code === 200 && runningData.data) {
+      tasks.push(...runningData.data)
+    }
+    
+    for (const task of tasks) {
+      if (task.task_type === 'platform_sync' && task.platform_id) {
+        platformSyncTasks.value.set(task.platform_id, {
+          task_id: task.id,
+          status: task.status,
+          progress: task.progress || 0,
+          completed_count: task.completed_count || 0,
+          failed_count: task.failed_count || 0,
+          total_count: task.total_count || null
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load sync tasks:', error)
+  }
+}
 </script>
 
 <style scoped>

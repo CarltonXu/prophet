@@ -79,16 +79,36 @@ class CollectionTask(db.Model):
     
     def to_dict(self):
         """Convert to dictionary"""
+        # Calculate total count
+        host_ids = self.get_host_ids()
+        if host_ids and len(host_ids) == 1 and host_ids[0] < 0:
+            # Platform sync task - estimate total from progress
+            total_count = None
+            done = self.completed_count + self.failed_count
+            if self.progress > 0 and done > 0:
+                # Estimate total from progress: done / progress = total
+                # Round up to ensure we don't show less than actual
+                estimated_total = int(done / (self.progress / 100.0))
+                # Use the larger of estimated or done (to handle rounding errors)
+                total_count = max(estimated_total, done)
+            elif self.status in ['completed', 'failed'] and done > 0:
+                # If task is done, total is at least completed + failed
+                total_count = done
+        else:
+            # Collection task - total is from host_ids
+            total_count = len(host_ids) if host_ids else 0
+        
         return {
             'id': self.id,
             'scan_task_id': self.scan_task_id,
-            'host_ids': self.get_host_ids(),
+            'host_ids': host_ids,
             'status': self.status,
             'progress': self.progress,
             'concurrent_limit': self.concurrent_limit,
             'current_running': self.current_running,
             'completed_count': self.completed_count,
             'failed_count': self.failed_count,
+            'total_count': total_count,
             'error_message': self.error_message,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'started_at': self.started_at.isoformat() if self.started_at else None,

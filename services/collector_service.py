@@ -5,9 +5,7 @@
 """Collector service to wrap HostCollector"""
 
 import logging
-from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from prophet.collector.collector import HostCollector
 from prophet.collector.hosts.linux import LinuxCollector
 from prophet.collector.hosts.windows import WindowsCollector
 from prophet.collector.hosts.vmware import VMwareCollector

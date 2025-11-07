@@ -1,10 +1,13 @@
 <template>
   <div class="px-4 py-6 sm:px-0">
     <div class="mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-        <Cog6ToothIcon class="h-7 w-7 mr-2 text-gray-700" />
-        {{ $t('settings.title') }}
-      </h1>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+          <Cog6ToothIcon class="h-7 w-7 mr-2 text-gray-700" />
+          {{ $t('settings.title') }}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('settings.subtitle') }}</p>
+      </div>
       <button
         @click="loadConfig"
         :disabled="loading"

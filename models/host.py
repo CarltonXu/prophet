@@ -49,6 +49,9 @@ class Host(db.Model):
     source_scan_task_id = db.Column(db.Integer, db.ForeignKey('scan_tasks.id'), nullable=True)
     source_platform_id = db.Column(db.Integer, db.ForeignKey('virtualization_platforms.id'), nullable=True)
     
+    # Scan information
+    scan_ports = db.Column(db.Text)  # JSON string of scanned ports: {"tcp": [22, 80, 443], "udp": [...]}
+    
     # Collection status
     last_collected_at = db.Column(db.DateTime, nullable=True, index=True)
     collection_status = db.Column(db.String(20), default='not_collected', index=True)  # not_collected/collecting/completed/failed
@@ -99,6 +102,7 @@ class Host(db.Model):
             'source': self.source,
             'source_scan_task_id': self.source_scan_task_id,
             'source_platform_id': self.source_platform_id,
+            'scan_ports': self.get_scan_ports(),
             'last_collected_at': self.last_collected_at.isoformat() if self.last_collected_at else None,
             'collection_status': self.collection_status,
             'virtualization_platform_id': self.virtualization_platform_id,
@@ -119,6 +123,22 @@ class Host(db.Model):
                 data['latest_detail'] = latest_detail.to_dict()
         
         return data
+    
+    def get_scan_ports(self):
+        """Get scan ports as dict"""
+        if self.scan_ports:
+            try:
+                return json.loads(self.scan_ports)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return None
+    
+    def set_scan_ports(self, ports_dict):
+        """Set scan ports from dict"""
+        if ports_dict:
+            self.scan_ports = json.dumps(ports_dict, ensure_ascii=False)
+        else:
+            self.scan_ports = None
     
     def __repr__(self):
         return f'<Host {self.ip}>'

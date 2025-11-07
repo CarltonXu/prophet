@@ -45,7 +45,10 @@
 
       <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-lg font-medium text-gray-900 mb-4">{{ $t('applications.hostList') }}</h2>
-        <div v-if="hosts.length === 0" class="text-center py-4 text-gray-500">{{ $t('applications.noHosts') }}</div>
+        <div v-if="hosts.length === 0" class="text-center py-8 text-gray-500">
+          <ServerIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+          <p>{{ $t('applications.noHosts') }}</p>
+        </div>
         <table v-else class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -76,7 +79,8 @@
       <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-lg font-medium text-gray-900 mb-4">{{ $t('applications.relationshipGraph') }}</h2>
         <div v-if="graphData.nodes.length === 0" class="text-center py-8 text-gray-500">
-          {{ $t('applications.noRelationshipData') }}
+          <ShareIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+          <p>{{ $t('applications.noRelationshipData') }}</p>
         </div>
         <div v-else class="border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[400px]">
           <!-- Simple graph visualization using SVG -->
@@ -265,6 +269,7 @@ import { hostsApi } from '@/api/hosts'
 import Modal from '@/components/Modal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useToastStore } from '@/stores/toast'
+import { ServerIcon, ShareIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 const route = useRoute()

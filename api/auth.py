@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from utils.jwt import get_current_user_id
 from werkzeug.security import check_password_hash
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
 import string
 import io
@@ -32,22 +32,42 @@ def get_captcha():
     captcha_id = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
     
     # Create image
-    img = Image.new('RGB', (120, 40), color='white')
+    img = Image.new('RGB', (150, 40), color='white')
     draw = ImageDraw.Draw(img)
     
     # Draw text
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 30)
     except:
-        font = ImageFont.load_default()
+        font = ImageFont.load_default(size=30)
     
-    draw.text((10, 10), code, fill='black', font=font)
+    draw.text((40, 0), code, fill='black', font=font)
     
-    # Add noise
-    for _ in range(50):
-        x = random.randint(0, 120)
-        y = random.randint(0, 40)
-        draw.point((x, y), fill=random.choice(['gray', 'lightgray']))
+    # Add more noise points (increased significantly)
+    img_width, img_height = 150, 40
+    for _ in range(150):
+        x = random.randint(0, img_width - 1)
+        y = random.randint(0, img_height - 1)
+        draw.point((x, y), fill=random.choice(['gray', 'lightgray', 'darkgray']))
+    
+    # Add random noise lines for more interference
+    for _ in range(10):
+        x1 = random.randint(0, img_width)
+        y1 = random.randint(0, img_height)
+        x2 = random.randint(0, img_width)
+        y2 = random.randint(0, img_height)
+        draw.line([(x1, y1), (x2, y2)], fill=random.choice(['gray', 'lightgray']), width=1)
+    
+    # Add random arcs/circles for additional noise
+    for _ in range(10):
+        x = random.randint(0, img_width)
+        y = random.randint(0, img_height)
+        radius = random.randint(1, 3)
+        draw.ellipse([x - radius, y - radius, x + radius, y + radius], 
+                    fill=random.choice(['gray', 'lightgray']))
+    
+    # Apply slight blur effect to make it more fuzzy
+    img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
     
     # Convert to base64
     buffered = io.BytesIO()

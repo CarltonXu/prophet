@@ -35,11 +35,14 @@ export const hostsApi = {
     page?: number
     per_page?: number
     search?: string
+    search_field?: string
     os_type?: string
     device_type?: string
     is_physical?: string
     platform_id?: number
     tag_id?: number
+    collection_status?: string
+    source?: string
   }) => apiClient.get('/hosts', { params }),
   
   getHost: (id: number) => apiClient.get(`/hosts/${id}`),
@@ -49,6 +52,8 @@ export const hostsApi = {
   updateHost: (id: number, data: Partial<Host>) => apiClient.put(`/hosts/${id}`, data),
   
   deleteHost: (id: number) => apiClient.delete(`/hosts/${id}`),
+  
+  batchDeleteHosts: (hostIds: number[]) => apiClient.post('/hosts/batch/delete', { host_ids: hostIds }),
   
   batchCreateHosts: (hosts: Host[]) => apiClient.post('/hosts/batch', { hosts }),
   

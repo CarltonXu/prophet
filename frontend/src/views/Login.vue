@@ -54,30 +54,48 @@
                 <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
                   {{ $t('auth.username') }}
                 </label>
-                <input
-                  id="username"
-                  v-model="form.username"
-                  type="text"
-                  required
-                  autocomplete="username"
-                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-                  :placeholder="$t('auth.username')"
-                />
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserIcon class="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="username"
+                    v-model="form.username"
+                    type="text"
+                    required
+                    autocomplete="username"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                    :placeholder="$t('auth.username')"
+                  />
+                </div>
               </div>
               
               <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
                   {{ $t('auth.password') }}
                 </label>
-                <input
-                  id="password"
-                  v-model="form.password"
-                  type="password"
-                  required
-                  autocomplete="current-password"
-                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-                  :placeholder="$t('auth.password')"
-                />
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LockClosedIcon class="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    v-model="form.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    required
+                    autocomplete="current-password"
+                    class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                    :placeholder="$t('auth.password')"
+                  />
+                  <button
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                  >
+                    <EyeIcon v-if="!showPassword" class="h-5 w-5" />
+                    <EyeSlashIcon v-else class="h-5 w-5" />
+                  </button>
+                </div>
               </div>
               
               <div>
@@ -109,13 +127,16 @@
                       </button>
                     </div>
                   </div>
-                  <div class="w-32">
+                  <div class="w-32 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <ShieldCheckIcon class="h-5 w-5 text-gray-400" />
+                    </div>
                     <input
                       v-model="form.captcha_code"
                       type="text"
                       required
                       maxlength="4"
-                      class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center uppercase transition-colors"
+                      class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase transition-colors"
                       :placeholder="$t('auth.captchaPlaceholder')"
                     />
                   </div>
@@ -177,7 +198,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ExclamationCircleIcon } from '@heroicons/vue/24/outline'
+import { ExclamationCircleIcon, EyeIcon, EyeSlashIcon, UserIcon, LockClosedIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
 import { Transition } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18nStore } from '@/stores/i18n'
@@ -204,6 +225,7 @@ const captcha = ref({
 
 const error = ref('')
 const loading = ref(false)
+const showPassword = ref(false)
 
 const loadCaptcha = async () => {
   try {
@@ -227,7 +249,12 @@ const handleLogin = async () => {
     })
     toastStore.success(t('auth.loginSuccess'))
   } catch (err: any) {
-    error.value = err || t('auth.loginFailed')
+    const errorMessage = typeof err === 'string' ? err : 
+                        err?.message || 
+                        err?.response?.data?.message || 
+                        t('auth.loginFailed')
+    error.value = errorMessage
+    toastStore.error(errorMessage)
     loadCaptcha()
   } finally {
     loading.value = false

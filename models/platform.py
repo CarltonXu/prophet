@@ -9,6 +9,15 @@ from db import db
 import json
 
 
+class PlatformTagRelation(db.Model):
+    """Platform-Tag relation table"""
+    __tablename__ = 'platform_tag_relations'
+    
+    platform_id = db.Column(db.Integer, db.ForeignKey('virtualization_platforms.id'), primary_key=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey('host_tags.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class VirtualizationPlatform(db.Model):
     """Virtualization platform model"""
     __tablename__ = 'virtualization_platforms'
@@ -31,6 +40,9 @@ class VirtualizationPlatform(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True, index=True)
+    
+    # Relationships
+    tags = db.relationship('HostTag', secondary='platform_tag_relations', lazy='subquery', backref=db.backref('platforms', lazy=True))
     
     def get_extra_config(self):
         """Get extra config as dict"""
@@ -69,6 +81,7 @@ class VirtualizationPlatform(db.Model):
             'username': self.username,
             'region': self.region,
             'extra_config': self.get_extra_config(),
+            'tags': [tag.to_dict() for tag in self.tags],
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

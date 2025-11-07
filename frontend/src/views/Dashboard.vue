@@ -1,10 +1,13 @@
 <template>
   <div class="px-4 py-6 sm:px-0 relative">
     <div class="mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-        <HomeIcon class="h-7 w-7 mr-2 text-gray-700" />
-        {{ $t('dashboard.title') }}
-      </h1>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+          <HomeIcon class="h-7 w-7 mr-2 text-gray-700" />
+          {{ $t('dashboard.title') }}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $t('dashboard.subtitle') }}</p>
+      </div>
       <button
         @click="loadStats"
         :disabled="loading"
@@ -119,7 +122,8 @@
         </h3>
         <div class="bg-white shadow overflow-hidden sm:rounded-md">
           <div v-if="recentTasks.length === 0" class="text-center py-8 text-gray-500">
-            {{ $t('dashboard.noScanTasks') }}
+            <ClockIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+            <p>{{ $t('dashboard.noScanTasks') }}</p>
           </div>
           <ul v-else class="divide-y divide-gray-200">
             <li v-for="task in recentTasks" :key="task.id" class="px-4 py-4 sm:px-6 hover:bg-gray-50">
