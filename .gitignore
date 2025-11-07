@@ -9,6 +9,10 @@
 .venv/*
 build/*
 log/*
+*.log
 .vscode/*
 celerybeat-schedule
 dist
+
+# frontend
+node_modules/

@@ -31,6 +31,7 @@ import sys
 import telnetlib
 import uuid
 import yaml
+import ssl
 
 from pyVim import connect
 from pyVmomi import vmodl
@@ -88,7 +89,7 @@ class VMwareCollector(BaseHostCollector):
         then get exsi later. If it's only esxi, then just save the
         esxi information.
 
-        After that get all VMs and save to files.
+        After that get all VMs and return all data.
         """
 
         # Try to connect to server first
@@ -109,12 +110,33 @@ class VMwareCollector(BaseHostCollector):
         else:
             vmware_info = self._esxis_info
 
-        filename = "%s_%s.yaml" % (self.ip, server_type)
-        yamlfile = os.path.join(self.base_path, filename)
-        self.save_to_yaml(yamlfile, vmware_info)
+        # Don't save to YAML file anymore - return data directly
+        # filename = "%s_%s.yaml" % (self.ip, server_type)
+        # yamlfile = os.path.join(self.base_path, filename)
+        # self.save_to_yaml(yamlfile, vmware_info)
 
         # Begin to collect all VMs
-        self._get_vms_info()
+        vms_info = self._get_vms_info()
+        
+        # Store vms_info in instance for potential access by sync service
+        self._vms_info = vms_info
+        
+        # Combine all collected data
+        save_values = {
+            self.root_key: {
+                "results": {
+                    "server_info": vmware_info,
+                    "vms": vms_info
+                },
+                "os_type": self.os_type,
+                "tcp_ports": None
+            }
+        }
+        
+        # Store collected data in instance for potential access by sync service
+        self.collected_data = save_values
+        
+        return save_values
 
     def connect(self):
         """Connect to vCenter or ESXi"""
@@ -127,12 +149,18 @@ class VMwareCollector(BaseHostCollector):
                       % (self.ip, self.ssh_port,
                          self.username, self.password))
         logging.info("Start connect %s vmware host..." % self.ip)
+        
+        # For pyvmomi 8.0+, SmartConnectNoSSL is removed
+        # Use SmartConnect with disableSslCertValidation parameter
         if self.disable_ssl_verification:
-            service_instance = connect.SmartConnectNoSSL(
+            # Create unverified SSL context
+            context = ssl._create_unverified_context()
+            service_instance = connect.SmartConnect(
                 host=self.ip,
                 user=self.username,
                 pwd=self.password,
-                port=int(self.ssh_port))
+                port=int(self.ssh_port),
+                sslContext=context)
         else:
             service_instance = connect.SmartConnect(
                 host=self.ip,
@@ -364,8 +392,9 @@ class VMwareCollector(BaseHostCollector):
 
         logging.info("Trying to get VMs total "
                      "count is %s" % len(vms_obj))
+        
+        all_vms_info = {}
         for vm in vms_obj:
-            vms_info = {}
             vm_name = None
 
             logging.info("Current vm object is %s" % vm)
@@ -391,7 +420,7 @@ class VMwareCollector(BaseHostCollector):
                 logging.info("Trying to get VM %s info..." % vm_name)
 
                 if vm_host in esxi_obj:
-                    vms_info[vmid] = self._get_vm_info(
+                    all_vms_info[vmid] = self._get_vm_info(
                             esxi_obj, cluster_obj, vm)
                 else:
                     logging.warn(
@@ -401,26 +430,25 @@ class VMwareCollector(BaseHostCollector):
                 logging.info(
                         "Success to get VM %s info" % vm_name)
 
-                filename = "%s_%s.yaml" % (vm.config.name, "vmware")
-                yamlfile = os.path.join(self.base_path, filename)
-                # NOTE(Ray): The tcp ports is the ports open on VMware
-                # vCenter or ESXi, so we don't need to add tcp ports
-                # For further development, we may read tcp ports from
-                # our scan results to get tcp ports for VMs
-                save_values = {
-                    self.root_key: {
-                        "results": vms_info,
-                        "os_type": self.os_type,
-                        "tcp_ports": None
-                    }
-                }
-                self.save_to_yaml(yamlfile, save_values)
+                # Don't save to YAML file anymore - collect all VMs first
+                # filename = "%s_%s.yaml" % (vm.config.name, "vmware")
+                # yamlfile = os.path.join(self.base_path, filename)
+                # save_values = {
+                #     self.root_key: {
+                #         "results": vms_info,
+                #         "os_type": self.os_type,
+                #         "tcp_ports": None
+                #     }
+                # }
+                # self.save_to_yaml(yamlfile, save_values)
 
                 self.success_vms.append(vm_name)
             except Exception as e:
                 self.failed_vms.append(vm_name)
                 logging.warn("Skip to get VM %s info, due to:")
                 logging.exception(e)
+        
+        return all_vms_info
 
 
     def _get_vm_info(self, esxi_obj, cluster_obj, vm):
