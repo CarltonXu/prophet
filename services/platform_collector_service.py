@@ -60,6 +60,7 @@ class PlatformCollectorService:
     def collect_platform_hosts(self):
         """Collect hosts from platform"""
         try:
+            hosts: List[Host] = []
             # Update status to running
             self.collection_task.status = 'running'
             self.collection_task.started_at = datetime.utcnow()
@@ -86,6 +87,11 @@ class PlatformCollectorService:
                 self.collection_task.completed_at = datetime.utcnow()
                 db.session.commit()
                 return
+            # Mark hosts as collecting at the start of task
+            for host in hosts:
+                host.collection_status = 'collecting'
+            db.session.commit()
+            self.update_progress()
             
             # Collect based on platform type
             if self.platform.type == 'vmware':
@@ -118,6 +124,33 @@ class PlatformCollectorService:
             import traceback
             traceback_str = traceback.format_exc()
             logger.error(traceback_str)
+            
+            # Mark any hosts still collecting as failed
+            try:
+                from models import HostDetail
+                failed_hosts = 0
+                completed_hosts = 0
+                for host in hosts:
+                    if host.collection_status == 'collecting':
+                        host.collection_status = 'failed'
+                        host.last_collected_at = datetime.utcnow()
+                        detail = HostDetail(
+                            host_id=host.id,
+                            details='',
+                            status='failed',
+                            collection_method='vmware_platform',
+                            error_message=str(e),
+                            collected_at=datetime.utcnow(),
+                        )
+                        db.session.add(detail)
+                    if host.collection_status == 'failed':
+                        failed_hosts += 1
+                    elif host.collection_status == 'completed':
+                        completed_hosts += 1
+                db.session.commit()
+                self.update_progress(completed=completed_hosts, failed=failed_hosts)
+            except Exception as update_hosts_error:
+                logger.error(f"Failed to update host statuses after error: {update_hosts_error}")
             
             # Save detailed error message
             self.collection_task.status = 'failed'

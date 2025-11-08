@@ -4,10 +4,11 @@
 
 """Hosts API"""
 
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, send_file
 from flask_jwt_extended import jwt_required
 from utils.jwt import get_current_user_id
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import selectinload
 import json
 import csv
 import io
@@ -17,6 +18,288 @@ from tasks.collector import collect_hosts_task
 from utils.encryption import encrypt_password, decrypt_password
 from utils.decorators import validate_json
 from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+
+FIELD_CATEGORIES = {
+    'basic': {
+        'label': '基本信息',
+        'label_key': 'hosts.exportCategories.basic'
+    },
+    'hardware': {
+        'label': '硬件信息',
+        'label_key': 'hosts.exportCategories.hardware'
+    },
+    'storage': {
+        'label': '存储信息',
+        'label_key': 'hosts.exportCategories.storage'
+    },
+    'network': {
+        'label': '网络信息',
+        'label_key': 'hosts.exportCategories.network'
+    },
+    'virtualization': {
+        'label': '虚拟化信息',
+        'label_key': 'hosts.exportCategories.virtualization'
+    },
+    'status': {
+        'label': '采集状态',
+        'label_key': 'hosts.exportCategories.status'
+    }
+}
+
+
+def _bytes_to_gb(value):
+    if not value:
+        return ''
+    try:
+        return round(value / (1024 ** 3), 2)
+    except Exception:
+        return ''
+
+
+FIELD_DEFINITIONS = {
+    'platform_type': {
+        'header': '平台类型',
+        'label': '平台类型',
+        'label_key': 'hosts.exportColumns.platformType',
+        'category': 'basic',
+        'width': 12,
+        'align': 'center'
+    },
+    'hostname': {
+        'header': '主机名',
+        'label': '主机名',
+        'label_key': 'hosts.exportColumns.hostname',
+        'category': 'basic',
+        'width': 22
+    },
+    'vmware_host': {
+        'header': 'VMware主机名',
+        'label': 'VMware主机名',
+        'label_key': 'hosts.exportColumns.vmwareHostName',
+        'category': 'virtualization',
+        'width': 24
+    },
+    'ip': {
+        'header': 'IP',
+        'label': 'IP',
+        'label_key': 'hosts.exportColumns.ipAddress',
+        'category': 'basic',
+        'width': 18
+    },
+    'mac': {
+        'header': 'Mac',
+        'label': 'Mac',
+        'label_key': 'hosts.exportColumns.macAddress',
+        'category': 'basic',
+        'width': 20
+    },
+    'os_type': {
+        'header': '操作系统类型',
+        'label': '操作系统类型',
+        'label_key': 'hosts.exportColumns.osType',
+        'category': 'basic',
+        'width': 18
+    },
+    'os_version': {
+        'header': '操作系统版本',
+        'label': '操作系统版本',
+        'label_key': 'hosts.exportColumns.osVersion',
+        'category': 'basic',
+        'width': 28
+    },
+    'os_bit': {
+        'header': '操作系统位数',
+        'label': '操作系统位数',
+        'label_key': 'hosts.exportColumns.osBit',
+        'category': 'basic',
+        'width': 12,
+        'align': 'center'
+    },
+    'os_kernel': {
+        'header': '操作系统内核',
+        'label': '操作系统内核',
+        'label_key': 'hosts.exportColumns.osKernel',
+        'category': 'basic',
+        'width': 20
+    },
+    'boot_type': {
+        'header': '启动方式',
+        'label': '启动方式',
+        'label_key': 'hosts.exportColumns.bootType',
+        'category': 'basic',
+        'width': 12,
+        'align': 'center'
+    },
+    'cpu_info': {
+        'header': 'CPU',
+        'label': 'CPU',
+        'label_key': 'hosts.exportColumns.cpuInfo',
+        'category': 'hardware',
+        'width': 32
+    },
+    'cpu_cores': {
+        'header': 'CPU核数',
+        'label': 'CPU核数',
+        'label_key': 'hosts.exportColumns.cpuCores',
+        'category': 'hardware',
+        'width': 12,
+        'align': 'center'
+    },
+    'memory_label': {
+        'header': '内存',
+        'label': '内存',
+        'label_key': 'hosts.exportColumns.memoryLabel',
+        'category': 'hardware',
+        'width': 18
+    },
+    'memory_total_gb': {
+        'header': '总内存(GB)',
+        'label': '总内存(GB)',
+        'label_key': 'hosts.exportColumns.memoryTotal',
+        'category': 'hardware',
+        'width': 16,
+        'align': 'center'
+    },
+    'memory_free_gb': {
+        'header': '剩余内存(GB)',
+        'label': '剩余内存(GB)',
+        'label_key': 'hosts.exportColumns.memoryFree',
+        'category': 'hardware',
+        'width': 18,
+        'align': 'center'
+    },
+    'disk_count': {
+        'header': '磁盘数量',
+        'label': '磁盘数量',
+        'label_key': 'hosts.exportColumns.diskCount',
+        'category': 'storage',
+        'width': 12,
+        'align': 'center'
+    },
+    'disk_total_size_gb': {
+        'header': '磁盘总容量(GB)',
+        'label': '磁盘总容量(GB)',
+        'label_key': 'hosts.exportColumns.diskTotalSize',
+        'category': 'storage',
+        'width': 18,
+        'align': 'center'
+    },
+    'disks': {
+        'header': '磁盘信息',
+        'label': '磁盘信息',
+        'label_key': 'hosts.exportColumns.disks',
+        'category': 'storage',
+        'width': 55,
+        'wrap': True
+    },
+    'partitions': {
+        'header': '分区信息',
+        'label': '分区信息',
+        'label_key': 'hosts.exportColumns.partitions',
+        'category': 'storage',
+        'width': 55,
+        'wrap': True
+    },
+    'network_count': {
+        'header': '网卡数量',
+        'label': '网卡数量',
+        'label_key': 'hosts.exportColumns.networkCount',
+        'category': 'network',
+        'width': 12,
+        'align': 'center'
+    },
+    'networks': {
+        'header': '网卡信息',
+        'label': '网卡信息',
+        'label_key': 'hosts.exportColumns.networkInterfaces',
+        'category': 'network',
+        'width': 60,
+        'wrap': True
+    },
+    'vt_platform': {
+        'header': '虚拟化类型',
+        'label': '虚拟化类型',
+        'label_key': 'hosts.exportColumns.vtPlatform',
+        'category': 'virtualization',
+        'width': 20
+    },
+    'vt_platform_ver': {
+        'header': '虚拟化版本',
+        'label': '虚拟化版本',
+        'label_key': 'hosts.exportColumns.vtPlatformVersion',
+        'category': 'virtualization',
+        'width': 20
+    },
+    'esxi_host': {
+        'header': 'ESXi服务器',
+        'label': 'ESXi服务器',
+        'label_key': 'hosts.exportColumns.esxiHost',
+        'category': 'virtualization',
+        'width': 25
+    },
+    'collection_status': {
+        'header': '采集状态',
+        'label': '采集状态',
+        'label_key': 'hosts.exportColumns.collectionStatus',
+        'category': 'status',
+        'width': 16,
+        'align': 'center'
+    },
+    'last_collected_at': {
+        'header': '最后采集时间',
+        'label': '最后采集时间',
+        'label_key': 'hosts.exportColumns.lastCollectedAt',
+        'category': 'status',
+        'width': 22
+    }
+}
+
+EXPORT_TEMPLATES = {
+    'summary': {
+        'name': '概要模板',
+        'name_key': 'hosts.exportTemplates.summary',
+        'description': '包含关键基础信息，适合快速预览',
+        'description_key': 'hosts.exportTemplates.summaryDesc',
+        'fields': [
+            'platform_type', 'hostname', 'ip', 'os_type', 'cpu_info', 'cpu_cores',
+            'memory_total_gb', 'disk_total_size_gb', 'vt_platform', 'collection_status'
+        ]
+    },
+    'detailed': {
+        'name': '详细模板',
+        'name_key': 'hosts.exportTemplates.detailed',
+        'description': '包含硬件、存储和网络详细信息',
+        'description_key': 'hosts.exportTemplates.detailedDesc',
+        'fields': [
+            'platform_type', 'hostname', 'vmware_host', 'ip', 'mac',
+            'os_type', 'os_version', 'os_bit', 'os_kernel', 'boot_type',
+            'cpu_info', 'cpu_cores', 'memory_label', 'memory_total_gb', 'memory_free_gb',
+            'disk_count', 'disk_total_size_gb', 'disks', 'partitions',
+            'network_count', 'networks', 'vt_platform', 'vt_platform_ver', 'esxi_host',
+            'collection_status', 'last_collected_at'
+        ]
+    },
+    'all': {
+        'name': '全部字段',
+        'name_key': 'hosts.exportTemplates.all',
+        'description': '导出所有支持的字段',
+        'description_key': 'hosts.exportTemplates.allDesc',
+        'fields': list(FIELD_DEFINITIONS.keys())
+    }
+}
+
+DEFAULT_EXPORT_TEMPLATE = 'summary'
+
+HOST_EXPORT_OPTIONS = [
+    selectinload(Host.disks),
+    selectinload(Host.partitions),
+    selectinload(Host.network_interfaces),
+    selectinload(Host.platform),
+]
+
 
 bp = Blueprint('hosts', __name__)
 
@@ -850,6 +1133,377 @@ def export_hosts_csv():
             'Content-Disposition': f'attachment; filename=hosts_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         }
     )
+
+
+def _apply_host_filters(query, filters):
+    if not filters:
+        return query
+    
+    search = filters.get('search')
+    search_field = filters.get('search_field', 'all')
+    os_type = filters.get('os_type')
+    device_type = filters.get('device_type')
+    tag_id = filters.get('tag_id')
+    collection_status = filters.get('collection_status')
+    source = filters.get('source')
+    is_physical = filters.get('is_physical')
+    platform_id = filters.get('platform_id')
+    
+    if search:
+        if search_field == 'ip':
+            query = query.filter(Host.ip.contains(search))
+        elif search_field == 'hostname':
+            query = query.filter(Host.hostname.contains(search))
+        elif search_field == 'mac':
+            query = query.filter(Host.mac.contains(search))
+        elif search_field == 'vendor':
+            query = query.filter(Host.vendor.contains(search))
+        else:
+            query = query.filter(
+                or_(
+                    Host.hostname.contains(search),
+                    Host.ip.contains(search),
+                    Host.mac.contains(search),
+                    Host.vendor.contains(search)
+                )
+            )
+    
+    if os_type:
+        query = query.filter_by(os_type=os_type)
+    
+    if device_type:
+        query = query.filter_by(device_type=device_type)
+    
+    if collection_status:
+        query = query.filter_by(collection_status=collection_status)
+    
+    if source:
+        query = query.filter_by(source=source)
+    
+    if platform_id:
+        try:
+            platform_id = int(platform_id)
+            query = query.filter(
+                or_(
+                    Host.source_platform_id == platform_id,
+                    Host.virtualization_platform_id == platform_id
+                )
+            )
+        except (TypeError, ValueError):
+            pass
+    
+    if is_physical is not None and is_physical != '':
+        if isinstance(is_physical, str):
+            is_physical_bool = is_physical.lower() == 'true'
+        else:
+            is_physical_bool = bool(is_physical)
+        query = query.filter_by(is_physical=is_physical_bool)
+    
+    if tag_id:
+        try:
+            tag_id_int = int(tag_id)
+            query = query.join(HostTagRelation).filter(HostTagRelation.tag_id == tag_id_int)
+        except (TypeError, ValueError):
+            pass
+    
+    return query
+
+
+def _bytes_to_gb(value):
+    if not value:
+        return ''
+    try:
+        return round(value / (1024 ** 3), 2)
+    except Exception:
+        return ''
+
+
+def _resolve_esxi_name(host):
+    if host.vendor and host.vendor.startswith('ESXi: '):
+        return host.vendor.replace('ESXi: ', '')
+    if host.platform and host.platform.name:
+        return host.platform.name
+    return ''
+
+
+def _format_disks(host):
+    entries = []
+    for disk in host.disks:
+        size_gb = _bytes_to_gb(disk.size)
+        entries.append(f"{disk.device or ''}|{size_gb}|{disk.vendor or ''}|{disk.model or ''}")
+    return '\n'.join(entries)
+
+
+def _format_partitions(host):
+    entries = []
+    for part in host.partitions:
+        total_gb = _bytes_to_gb(part.size_total)
+        available_gb = _bytes_to_gb(part.size_available)
+        if part.size_available_ratio is not None:
+            usage_ratio = round((1 - part.size_available_ratio) * 100, 2)
+        else:
+            usage_ratio = ''
+        entries.append(f"{part.device or ''}|{total_gb}|{available_gb}|{usage_ratio}|{part.fstype or ''}")
+    return '\n'.join(entries)
+
+
+def _format_networks(host):
+    entries = []
+    for nic in host.network_interfaces:
+        if nic.active is True:
+            active_str = 'True'
+        elif nic.active is False:
+            active_str = 'False'
+        else:
+            active_str = ''
+        entries.append(
+            f"{nic.interface or ''}|{nic.macaddress or ''}|{active_str}|"
+            f"{nic.mtu or ''}|{nic.speed or ''}|{nic.ipv4_address or ''}|"
+            f"{nic.ipv4_netmask or ''}|{nic.ipv4_network or ''}|"
+            f"{nic.ipv4_broadcast or ''}|{nic.gateway or ''}"
+        )
+    return '\n'.join(entries)
+
+
+def _get_field_value(field_key, host):
+    if field_key == 'platform_type':
+        return 'Physical' if host.is_physical else (host.vt_platform or 'Virtual')
+    if field_key == 'hostname':
+        return host.hostname or ''
+    if field_key == 'vmware_host':
+        return host.platform.name if host.platform and host.platform.name else ''
+    if field_key == 'ip':
+        return host.ip or ''
+    if field_key == 'mac':
+        return host.mac or ''
+    if field_key == 'os_type':
+        return host.os_type or ''
+    if field_key == 'os_version':
+        return host.os_version or ''
+    if field_key == 'os_bit':
+        return host.os_bit or ''
+    if field_key == 'os_kernel':
+        return host.os_kernel or ''
+    if field_key == 'boot_type':
+        return host.boot_type or ''
+    if field_key == 'cpu_info':
+        return host.cpu_info or ''
+    if field_key == 'cpu_cores':
+        return host.cpu_cores or ''
+    if field_key == 'memory_label':
+        return host.memory_info or ''
+    if field_key == 'memory_total_gb':
+        return host.memory_total or ''
+    if field_key == 'memory_free_gb':
+        return host.memory_free or ''
+    if field_key == 'disk_count':
+        return host.disk_count or ''
+    if field_key == 'disk_total_size_gb':
+        return host.disk_total_size or ''
+    if field_key == 'disks':
+        return _format_disks(host)
+    if field_key == 'partitions':
+        return _format_partitions(host)
+    if field_key == 'network_count':
+        if host.network_count is not None:
+            return host.network_count
+        return len(host.network_interfaces or [])
+    if field_key == 'networks':
+        return _format_networks(host)
+    if field_key == 'vt_platform':
+        return host.vt_platform or ''
+    if field_key == 'vt_platform_ver':
+        return host.vt_platform_ver or ''
+    if field_key == 'esxi_host':
+        return _resolve_esxi_name(host)
+    if field_key == 'collection_status':
+        return host.collection_status or ''
+    if field_key == 'last_collected_at':
+        return host.last_collected_at.isoformat() if host.last_collected_at else ''
+    return ''
+
+
+@bp.route('/export/excel', methods=['POST'])
+@jwt_required()
+def export_hosts_excel():
+    """Export hosts as Excel workbook with customizable fields"""
+    data = request.json or {}
+    host_ids = data.get('host_ids', [])
+    select_all = data.get('select_all', False)
+    filters = data.get('filters', {}) if select_all else {}
+    requested_fields = data.get('fields')
+    template_name = data.get('template')
+    
+    if requested_fields and isinstance(requested_fields, list):
+        requested_fields = [field for field in requested_fields if field in FIELD_DEFINITIONS]
+    else:
+        requested_fields = None
+    
+    if template_name and template_name in EXPORT_TEMPLATES:
+        template_fields = EXPORT_TEMPLATES[template_name]['fields']
+    else:
+        template_fields = EXPORT_TEMPLATES[DEFAULT_EXPORT_TEMPLATE]['fields']
+    
+    fields = requested_fields or template_fields
+    if not fields:
+        fields = EXPORT_TEMPLATES[DEFAULT_EXPORT_TEMPLATE]['fields']
+    
+    seen_fields = set()
+    filtered_fields = []
+    for field in fields:
+        if field in FIELD_DEFINITIONS and field not in seen_fields:
+            filtered_fields.append(field)
+            seen_fields.add(field)
+    fields = filtered_fields
+    
+    if not fields:
+        return jsonify({
+            'code': 400,
+            'message': 'No valid fields selected for export'
+        }), 400
+    
+    if select_all:
+        query = Host.query.options(*HOST_EXPORT_OPTIONS).filter(Host.deleted_at == None)
+        query = _apply_host_filters(query, filters)
+        ordered_hosts = query.order_by(Host.id.asc()).all()
+    else:
+        if not isinstance(host_ids, list) or len(host_ids) == 0:
+            return jsonify({
+                'code': 400,
+                'message': 'host_ids must be a non-empty list'
+            }), 400
+        
+        normalized_ids = []
+        for host_id in host_ids:
+            try:
+                normalized_ids.append(int(host_id))
+            except (TypeError, ValueError):
+                continue
+        
+        if not normalized_ids:
+            return jsonify({
+                'code': 400,
+                'message': 'No valid host IDs provided'
+            }), 400
+        
+        hosts_query = Host.query.options(*HOST_EXPORT_OPTIONS).filter(
+            Host.id.in_(normalized_ids),
+            Host.deleted_at == None
+        ).all()
+        
+        host_map = {host.id: host for host in hosts_query}
+        ordered_hosts = [host_map[host_id] for host_id in normalized_ids if host_id in host_map]
+    
+    if not ordered_hosts:
+        return jsonify({
+            'code': 404,
+            'message': 'No hosts found for export'
+        }), 404
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Hosts'
+    
+    headers = [FIELD_DEFINITIONS[field]['header'] for field in fields]
+    ws.append(headers)
+    
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='1F2937', end_color='1F2937', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin', color='D1D5DB'),
+        right=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'),
+        bottom=Side(style='thin', color='D1D5DB')
+    )
+    
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.fill = header_fill
+        cell.border = thin_border
+    
+    ws.row_dimensions[1].height = 22
+    
+    for index, field in enumerate(fields, start=1):
+        width = FIELD_DEFINITIONS[field].get('width', 18)
+        ws.column_dimensions[get_column_letter(index)].width = width
+    
+    for host in ordered_hosts:
+        row = [_get_field_value(field, host) for field in fields]
+        ws.append(row)
+        
+        current_row = ws.max_row
+        for col_index, field in enumerate(fields, start=1):
+            cell = ws.cell(row=current_row, column=col_index)
+            wrap_text = FIELD_DEFINITIONS[field].get('wrap', False)
+            align = FIELD_DEFINITIONS[field].get('align', 'left')
+            cell.alignment = Alignment(
+                wrap_text=wrap_text,
+                vertical='top',
+                horizontal='center' if align == 'center' else 'left'
+            )
+            cell.border = thin_border
+    
+    ws.freeze_panes = 'A2'
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"hosts_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@bp.route('/export/templates', methods=['GET'])
+@jwt_required()
+def get_host_export_templates():
+    """Return available export templates and field metadata"""
+    fields_payload = {
+        key: {
+            'label': definition['label'],
+            'label_key': definition['label_key'],
+            'category': definition['category'],
+            'category_label_key': FIELD_CATEGORIES[definition['category']]['label_key'],
+        }
+        for key, definition in FIELD_DEFINITIONS.items()
+    }
+    
+    categories_payload = [
+        {
+            'id': category_id,
+            'label': category_data['label'],
+            'label_key': category_data['label_key'],
+        }
+        for category_id, category_data in FIELD_CATEGORIES.items()
+    ]
+    
+    templates_payload = [
+        {
+            'id': template_key,
+            'name': template_data['name'],
+            'name_key': template_data['name_key'],
+            'description': template_data.get('description'),
+            'description_key': template_data.get('description_key'),
+            'fields': template_data['fields'],
+        }
+        for template_key, template_data in EXPORT_TEMPLATES.items()
+    ]
+    
+    return jsonify({
+        'code': 200,
+        'data': {
+            'fields': fields_payload,
+            'categories': categories_payload,
+            'templates': templates_payload,
+            'default_template': DEFAULT_EXPORT_TEMPLATE,
+            'all_fields': list(FIELD_DEFINITIONS.keys())
+        }
+    })
 
 
 @bp.route('/<int:host_id>/export', methods=['GET'])

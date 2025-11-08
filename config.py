@@ -16,7 +16,7 @@ class Config:
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        f'sqlite:///{BASE_DIR}/prophet_web.db'
+        f'sqlite:///{BASE_DIR}/prophet.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
@@ -53,7 +53,7 @@ class Config:
     
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL') or 'INFO'
-    LOG_FILE = os.environ.get('LOG_FILE') or str(BASE_DIR / 'prophet_web.log')
+    LOG_FILE = os.environ.get('LOG_FILE') or str(BASE_DIR / 'prophet.log')
     
     # Default concurrent limits
     DEFAULT_SCAN_CONCURRENT = int(os.environ.get('DEFAULT_SCAN_CONCURRENT', '1'))

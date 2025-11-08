@@ -55,6 +55,11 @@ export const hostsApi = {
   
   batchDeleteHosts: (hostIds: number[]) => apiClient.post('/hosts/batch/delete', { host_ids: hostIds }),
   
+  exportHostsExcel: (payload: any) =>
+    apiClient.post('/hosts/export/excel', payload, { responseType: 'blob' }),
+  
+  getExportTemplates: () => apiClient.get('/hosts/export/templates'),
+
   batchCreateHosts: (hosts: Host[]) => apiClient.post('/hosts/batch', { hosts }),
   
   setCredentials: (id: number, credentials: HostCredential) =>

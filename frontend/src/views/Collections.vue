@@ -350,8 +350,8 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      v-if="result.id"
-                      @click="viewHostDetails(result.id)"
+                      v-if="result"
+                      @click="viewHostDetails(result)"
                       class="text-blue-600 hover:text-blue-900"
                     >
                       {{ $t('collections.viewHostDetails') }}
@@ -394,7 +394,6 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
-import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 import {
@@ -413,7 +412,6 @@ import {
 
 const toastStore = useToastStore()
 const settingsStore = useSettingsStore()
-const router = useRouter()
 
 const tasks = ref<CollectionTask[]>([])
 const loading = ref(false)
@@ -661,8 +659,18 @@ const exportTaskResults = async (id: number) => {
   }
 }
 
-const viewHostDetails = (hostId: number) => {
-  router.push({ name: 'Hosts', query: { hostId } })
+const viewHostDetails = (host: any) => {
+  if (!host) return
+  const params = new URLSearchParams()
+  if (host.ip) {
+    params.set('search_field', 'ip')
+    params.set('search', host.ip)
+  }
+  if (host.id) {
+    params.set('highlightHostId', String(host.id))
+  }
+  const url = `/hosts${params.toString() ? `?${params.toString()}` : ''}`
+  window.open(url, '_blank')
   closeDetailModal()
 }
 

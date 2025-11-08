@@ -143,8 +143,21 @@ class CollectorService:
             from flask import current_app
             app = current_app._get_current_object() if hasattr(current_app, '_get_current_object') else current_app
             
+            # Mark all hosts as collecting at task start for real-time updates
+            try:
+                for host_id in host_ids:
+                    host = Host.query.get(host_id)
+                    if host:
+                        host.collection_status = 'collecting'
+                db.session.commit()
+            except Exception as status_error:
+                logger.error(f"Failed to pre-mark hosts as collecting: {status_error}")
+                db.session.rollback()
+            
             with ThreadPoolExecutor(max_workers=concurrent_limit) as executor:
                 futures = {}
+                successful_hosts = set()
+                failed_hosts = set()
                 
                 for host_id in host_ids:
                     host = Host.query.get(host_id)
@@ -166,15 +179,36 @@ class CollectorService:
                         result = future.result()
                         if result:
                             completed += 1
+                            successful_hosts.add(host_id)
                         else:
                             failed += 1
+                            failed_hosts.add(host_id)
                     except Exception as e:
                         logger.error(f"Error collecting host {host_id}: {e}")
                         failed += 1
+                        failed_hosts.add(host_id)
                     
                     # Update progress
                     running = len([f for f in futures if not f.done()])
                     self.update_progress(completed=completed, failed=failed, running=running)
+            
+            # Ensure host statuses are synchronized with results
+            try:
+                for host_id in host_ids:
+                    host = Host.query.get(host_id)
+                    if not host:
+                        continue
+                    if host_id in successful_hosts:
+                        host.collection_status = 'completed'
+                    elif host_id in failed_hosts:
+                        host.collection_status = 'failed'
+                    elif host.collection_status == 'collecting':
+                        # Host did not finish processing -> mark as failed
+                        host.collection_status = 'failed'
+                db.session.commit()
+            except Exception as status_error:
+                logger.error(f"Failed to synchronize host statuses after collection: {status_error}")
+                db.session.rollback()
             
             # Update task status based on results
             total = len(host_ids)
@@ -245,6 +279,11 @@ class CollectorService:
             temp_dir = tempfile.mkdtemp()
             
             try:
+                # Mark host as collecting before starting long-running operations
+                host.collection_status = 'collecting'
+                host.last_collected_at = datetime.utcnow()
+                db.session.commit()
+                
                 # Determine collector based on OS type
                 os_type = host.os_type.upper() if host.os_type else 'LINUX'
                 
@@ -275,10 +314,6 @@ class CollectorService:
                 collected_data = collector.collect()
                 
                 if collected_data:
-                    # Update collection status to 'collecting' first for real-time updates
-                    host.collection_status = 'collecting'
-                    db.session.commit()  # Commit immediately for real-time status updates
-                    
                     # Parse and update host using parser service
                     from services.collection_parser_service import CollectionParserService
                     parser_service = CollectionParserService(os_type)

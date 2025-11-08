@@ -192,6 +192,15 @@
                       {{ $t('hosts.batchManageTags') }}
                     </button>
                   </MenuItem>
+                  <MenuItem v-slot="{ active }">
+                    <button
+                      @click="openExportModal"
+                      :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
+                    >
+                      <ArrowDownTrayIcon class="h-4 w-4 mr-3 text-gray-400" />
+                      {{ $t('hosts.batchExportExcel') }}
+                    </button>
+                  </MenuItem>
                   <div class="border-t border-gray-200 my-1"></div>
                   <MenuItem v-slot="{ active }">
                     <button
@@ -1337,6 +1346,121 @@
       </template>
     </Modal>
 
+    <!-- Export Hosts Modal -->
+    <Modal
+      :open="showExportModal"
+      @close="closeExportModal"
+      :title="$t('hosts.exportModalTitle')"
+      max-width="4xl"
+    >
+      <div v-if="exportConfigLoading" class="py-10">
+        <LoadingOverlay :loading="true" :text="$t('hosts.loadingExportConfig')" />
+      </div>
+      <div v-else class="space-y-6">
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 mb-3">{{ $t('hosts.exportTemplate') }}</h3>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label
+              v-for="template in exportTemplateOptions"
+              :key="template.id"
+              class="flex items-start space-x-3 rounded-lg border border-gray-200 p-3 hover:border-blue-400 cursor-pointer transition"
+            >
+              <input
+                type="radio"
+                name="export-template"
+                :value="template.id"
+                v-model="selectedTemplate"
+                class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">
+                  {{ template.nameKey ? t(template.nameKey) : template.name }}
+                </p>
+                <p v-if="template.descriptionKey || template.description" class="mt-1 text-xs text-gray-500">
+                  {{ template.descriptionKey ? t(template.descriptionKey) : template.description }}
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-gray-700">{{ $t('hosts.exportSelectFields') }}</h3>
+            <button
+              type="button"
+              class="text-sm text-blue-600 hover:text-blue-800"
+              @click="selectAllExportFields"
+            >
+              {{ $t('hosts.exportSelectAllFields') }}
+            </button>
+          </div>
+          <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+            <div
+              v-for="category in exportFieldsByCategory"
+              :key="category.id"
+              class="border border-gray-200 rounded-lg"
+            >
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                <h4 class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  {{ t(category.labelKey) }}
+                </h4>
+              </div>
+              <div class="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                <label
+                  v-for="field in category.fields"
+                  :key="field.key"
+                  class="inline-flex items-center space-x-2 rounded-md px-2 py-1 hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    :value="field.key"
+                    v-model="selectedExportFields"
+                    class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-700">{{ t(field.labelKey) }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 w-full">
+          <p class="text-sm text-gray-500">
+            {{ t('hosts.exportSelectedCount', { count: selectedHosts.length }) }}
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2 sm:ml-auto">
+            <button
+              type="button"
+              @click="closeExportModal"
+              class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              {{ $t('common.cancel') }}
+            </button>
+            <button
+              type="button"
+              @click="submitExport('selected')"
+              :disabled="exportLoading || selectedHosts.length === 0"
+              class="inline-flex justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="exportLoading" class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+              {{ $t('hosts.exportSelectedButton') }}
+            </button>
+            <button
+              type="button"
+              @click="submitExport('all')"
+              :disabled="exportLoading"
+              class="inline-flex justify-center rounded-md bg-gray-800 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="exportLoading" class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+              {{ $t('hosts.exportAllButton') }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </Modal>
+
     <!-- Batch Delete Confirmation Modal -->
     <Modal :open="showBatchDeleteModal" @close="closeBatchDeleteModal" :title="$t('hosts.batchDelete')" max-width="md">
       <div class="space-y-4">
@@ -1401,6 +1525,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { hostsApi, type Host } from '@/api/hosts'
 import { importApi } from '@/api/import'
@@ -1408,6 +1533,26 @@ import { tagsApi } from '@/api/tags'
 import Modal from '@/components/Modal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+
+interface ExportFieldDefinition {
+  key: string
+  labelKey: string
+  category: string
+}
+
+interface ExportCategoryDefinition {
+  id: string
+  labelKey: string
+}
+
+interface ExportTemplateOption {
+  id: string
+  nameKey?: string
+  name?: string
+  descriptionKey?: string
+  description?: string
+  fields: string[]
+}
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
 import {
@@ -1448,6 +1593,7 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 const { t } = useI18n()
 const toastStore = useToastStore()
 const settingsStore = useSettingsStore()
+const route = useRoute()
 
 const hosts = ref<Host[]>([])
 const loading = ref(false)
@@ -1455,6 +1601,7 @@ const loadingTree = ref(false)
 const searchQuery = ref('')
 const searchField = ref('all')
 const selectedHosts = ref<number[]>([])
+const highlightedHostId = ref<number | null>(null)
 const viewMode = ref<'list' | 'tree'>('list')
 const treeData = ref<any[]>([])
 // Track expanded/collapsed state for platforms and ESXi hosts
@@ -1507,6 +1654,18 @@ const showFilters = ref(false)
 const showFieldDropdown = ref(false)
 const showValueDropdown = ref(false)
 const searchContainer = ref<HTMLElement | null>(null)
+const showExportModal = ref(false)
+const exportTemplatesList = ref<ExportTemplateOption[]>([])
+const exportFieldDefinitionsMap = ref<Record<string, ExportFieldDefinition>>({})
+const exportCategoriesList = ref<ExportCategoryDefinition[]>([])
+const exportDefaultTemplate = ref('summary')
+const exportTemplatesLoaded = ref(false)
+const exportConfigLoading = ref(false)
+const exportLoading = ref(false)
+const selectedTemplate = ref<string>('summary')
+const selectedExportFields = ref<string[]>([])
+
+let applyingExportTemplate = false
 
 const searchFields = computed(() => [
   { value: 'all', label: t('hosts.searchAll') },
@@ -1521,7 +1680,98 @@ const allSelected = computed(() => {
   return hosts.value.length > 0 && selectedHosts.value.length === hosts.value.length
 })
 
+const exportTemplateOptions = computed(() => {
+  const templates = exportTemplatesList.value.map(template => ({
+    id: template.id,
+    nameKey: template.nameKey,
+    name: template.name,
+    descriptionKey: template.descriptionKey,
+    description: template.description,
+    fields: template.fields,
+  }))
+  return [
+    ...templates,
+    {
+      id: 'custom',
+      nameKey: 'hosts.exportTemplateCustom',
+      fields: [],
+    },
+  ]
+})
+
+const exportFieldsByCategory = computed(() => {
+  return exportCategoriesList.value
+    .map(category => ({
+      ...category,
+      fields: Object.values(exportFieldDefinitionsMap.value).filter(
+        field => field.category === category.id
+      ),
+    }))
+    .filter(category => category.fields.length > 0)
+})
+
+const allExportFieldKeys = computed(() => Object.keys(exportFieldDefinitionsMap.value))
+
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
+let collectingPollInterval: ReturnType<typeof setInterval> | null = null
+
+const buildHostQueryParams = (page?: number, includePaging = true) => {
+  const params: Record<string, any> = {}
+  
+  if (includePaging) {
+    params.page = page ?? pagination.value?.page ?? 1
+    params.per_page = perPage.value
+  }
+  
+  if (searchQuery.value) {
+    if (searchField.value === 'tag') {
+      const tag = availableTags.value.find(tagItem => tagItem.name === searchQuery.value)
+      if (tag) {
+        params.tag_id = tag.id
+      }
+    } else if (searchField.value === 'all') {
+      params.search = searchQuery.value
+    } else {
+      params.search = searchQuery.value
+      params.search_field = searchField.value
+    }
+  }
+  
+  if (filters.value.os_type) params.os_type = filters.value.os_type
+  if (filters.value.device_type) params.device_type = filters.value.device_type
+  if (filters.value.collection_status) params.collection_status = filters.value.collection_status
+  if (filters.value.source) params.source = filters.value.source
+  if (filters.value.is_physical) params.is_physical = filters.value.is_physical
+  if (filters.value.tag_id) {
+    const tagIdNumber = Number(filters.value.tag_id)
+    if (!Number.isNaN(tagIdNumber)) {
+      params.tag_id = tagIdNumber
+    }
+  }
+  
+  return params
+}
+
+const buildExportFilters = () => {
+  const params = buildHostQueryParams(undefined, false)
+  return params
+}
+
+const applyRouteQuery = () => {
+  const { search, search_field, highlightHostId } = route.query
+  if (typeof search === 'string' && search.trim() !== '') {
+    searchQuery.value = search
+    if (typeof search_field === 'string' && search_field.trim() !== '') {
+      searchField.value = search_field as string
+    }
+  }
+  if (typeof highlightHostId === 'string') {
+    const parsed = Number(highlightHostId)
+    if (!Number.isNaN(parsed)) {
+      highlightedHostId.value = parsed
+    }
+  }
+}
 
 const debouncedSearch = () => {
   if (searchTimeout) clearTimeout(searchTimeout)
@@ -1533,49 +1783,31 @@ const debouncedSearch = () => {
 const loadHosts = async (page = 1) => {
   loading.value = true
   try {
-    const params: any = {
-      page,
-      per_page: perPage.value,
-    }
-    
-    // Add search with field
-    if (searchQuery.value) {
-      if (searchField.value === 'tag') {
-        // For tag search, find tag ID by name
-        const tag = availableTags.value.find(t => t.name === searchQuery.value)
-        if (tag) {
-          params.tag_id = tag.id
-        }
-      } else if (searchField.value === 'all') {
-        // Search all fields
-        params.search = searchQuery.value
-      } else {
-        // Search specific field
-        params.search = searchQuery.value
-        params.search_field = searchField.value
-      }
-    }
-    
-    // Add filters
-    if (filters.value.os_type) params.os_type = filters.value.os_type
-    if (filters.value.device_type) params.device_type = filters.value.device_type
-    if (filters.value.collection_status) params.collection_status = filters.value.collection_status
-    if (filters.value.source) params.source = filters.value.source
-    if (filters.value.is_physical) params.is_physical = filters.value.is_physical
-    if (filters.value.tag_id) params.tag_id = parseInt(filters.value.tag_id)
-    
+    const params = buildHostQueryParams(page, true)
     const response: any = await hostsApi.getHosts(params)
     
-    // API client interceptor returns response.data directly
-    // So response is already the data object: { code: 200, data: [...], pagination: {...} }
     if (response && response.code === 200) {
       hosts.value = Array.isArray(response.data) ? response.data : []
       pagination.value = response.pagination || null
     } else {
-      // Fallback: handle unexpected response format
       hosts.value = []
       pagination.value = null
       console.warn('Unexpected response format from getHosts:', response)
+    }
+    
+    if (highlightedHostId.value) {
+      const highlightId = highlightedHostId.value
+      const targetHost = hosts.value.find((h: any) => h.id === highlightId)
+      if (targetHost) {
+        selectedHosts.value = [highlightId]
+      }
+    }
+    
+    const hasCollectingHosts = hosts.value.some((h: any) => h.collection_status === 'collecting')
+    if (hasCollectingHosts) {
+      startCollectingPoll()
+    } else {
+      stopCollectingPoll()
     }
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('messages.loadFailed'))
@@ -1800,6 +2032,25 @@ const loadTreeData = async () => {
     treeData.value = []
   } finally {
     loadingTree.value = false
+  }
+}
+
+const startCollectingPoll = () => {
+  if (collectingPollInterval) {
+    return
+  }
+  collectingPollInterval = setInterval(() => {
+    loadHosts(pagination.value?.page || 1)
+    if (viewMode.value === 'tree') {
+      loadTreeData()
+    }
+  }, 4000)
+}
+
+const stopCollectingPoll = () => {
+  if (collectingPollInterval) {
+    clearInterval(collectingPollInterval)
+    collectingPollInterval = null
   }
 }
 
@@ -2394,6 +2645,175 @@ const removeHostTag = async (hostId: number, tagId: number) => {
   }
 }
 
+// Export configuration and actions
+const loadExportTemplates = async () => {
+  exportConfigLoading.value = true
+  try {
+    const response: any = await hostsApi.getExportTemplates()
+    if (response && response.code === 200) {
+      const data = response.data || {}
+      exportFieldDefinitionsMap.value = Object.entries(data.fields || {}).reduce(
+        (acc: Record<string, ExportFieldDefinition>, [key, value]: [string, any]) => {
+          acc[key] = {
+            key,
+            labelKey: value.label_key || '',
+            category: value.category || 'basic',
+          }
+          return acc
+        },
+        {}
+      )
+      exportCategoriesList.value = (data.categories || []).map((category: any) => ({
+        id: category.id,
+        labelKey: category.label_key || '',
+      }))
+      exportTemplatesList.value = (data.templates || []).map((template: any) => ({
+        id: template.id,
+        nameKey: template.name_key,
+        name: template.name,
+        descriptionKey: template.description_key,
+        description: template.description,
+        fields: template.fields || [],
+      }))
+      exportDefaultTemplate.value = data.default_template || 'summary'
+      exportTemplatesLoaded.value = true
+    }
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('hosts.exportFailed'))
+  } finally {
+    exportConfigLoading.value = false
+  }
+}
+
+const applyExportTemplate = (templateId: string) => {
+  const template = exportTemplatesList.value.find(item => item.id === templateId)
+  if (!template) {
+    selectedTemplate.value = 'custom'
+    return
+  }
+  applyingExportTemplate = true
+  selectedTemplate.value = templateId
+  selectedExportFields.value = [...template.fields]
+  nextTick(() => {
+    applyingExportTemplate = false
+  })
+}
+
+const openExportModal = async () => {
+  if (!exportTemplatesLoaded.value && !exportConfigLoading.value) {
+    await loadExportTemplates()
+  }
+  
+  if (!exportTemplatesLoaded.value) {
+    return
+  }
+  
+  const defaultTemplateId =
+    exportTemplatesList.value.find(template => template.id === exportDefaultTemplate.value)?.id ||
+    exportTemplatesList.value[0]?.id ||
+    'custom'
+  
+  if (defaultTemplateId && defaultTemplateId !== 'custom') {
+    applyExportTemplate(defaultTemplateId)
+  } else {
+    selectedTemplate.value = 'custom'
+    selectedExportFields.value = [...allExportFieldKeys.value]
+  }
+  
+  showExportModal.value = true
+}
+
+const closeExportModal = () => {
+  showExportModal.value = false
+  exportLoading.value = false
+}
+
+const selectAllExportFields = () => {
+  selectedExportFields.value = [...allExportFieldKeys.value]
+  selectedTemplate.value = 'custom'
+}
+
+const submitExport = async (mode: 'selected' | 'all') => {
+  if (selectedExportFields.value.length === 0) {
+    toastStore.warning(t('hosts.exportNoFieldsSelected'))
+    return
+  }
+  
+  if (mode === 'selected' && selectedHosts.value.length === 0) {
+    toastStore.warning(t('hosts.noHostsSelected'))
+    return
+  }
+  
+  const payload: any = {
+    host_ids: mode === 'selected' ? selectedHosts.value : [],
+    fields: selectedExportFields.value,
+  }
+  
+  if (selectedTemplate.value && selectedTemplate.value !== 'custom') {
+    payload.template = selectedTemplate.value
+  }
+  
+  if (mode === 'all') {
+    payload.select_all = true
+    payload.filters = buildExportFilters()
+  }
+  
+  exportLoading.value = true
+  try {
+    const response: any = await hostsApi.exportHostsExcel(payload)
+    const blob =
+      response instanceof Blob
+        ? response
+        : new Blob([response], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `hosts_export_${new Date().toISOString().split('T')[0]}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toastStore.success(t('hosts.exportSuccess'))
+    closeExportModal()
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('hosts.exportFailed'))
+  } finally {
+    exportLoading.value = false
+  }
+}
+
+watch(
+  selectedTemplate,
+  newValue => {
+    if (applyingExportTemplate) {
+      return
+    }
+    if (!exportTemplatesLoaded.value) {
+      return
+    }
+    if (newValue === 'custom') {
+      return
+    }
+    applyExportTemplate(newValue)
+  }
+)
+
+watch(
+  selectedExportFields,
+  () => {
+    if (!exportTemplatesLoaded.value) {
+      return
+    }
+    if (applyingExportTemplate) {
+      return
+    }
+    selectedTemplate.value = 'custom'
+  },
+  { deep: true }
+)
+
 const openBatchTagManagementModal = async () => {
   if (selectedHosts.value.length === 0) {
     toastStore.warning(t('hosts.noHostsSelected'))
@@ -2581,6 +3001,7 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 onMounted(() => {
+  applyRouteQuery()
   loadHosts()
   loadTags()
   if (viewMode.value === 'tree') {
@@ -2593,5 +3014,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  stopCollectingPoll()
 })
 </script>

@@ -184,7 +184,9 @@ class VMwareCollector(BaseHostCollector):
         except Exception as error:
             logging.error("Check %s:%s failed, due to %s"
                           % (self.ip, self.ssh_port, error))
-            sys.exit()
+            raise ConnectionError(
+                f"Unable to reach {self.ip}:{self.ssh_port}: {error}"
+            ) from error
         else:
             logging.info("Host %s:%s check successful."
                          % (self.ip, self.ssh_port))
