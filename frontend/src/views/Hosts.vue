@@ -185,6 +185,15 @@
                     </MenuItem>
                   <MenuItem v-slot="{ active }">
                     <button
+                      @click="openBatchAddToAppModal"
+                      :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
+                    >
+                      <Squares2X2Icon class="h-4 w-4 mr-3 text-gray-400" />
+                      {{ $t('hosts.batchAddToApplication') }}
+                    </button>
+                  </MenuItem>
+                  <MenuItem v-slot="{ active }">
+                    <button
                       @click="openBatchTagManagementModal"
                       :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
                     >
@@ -209,8 +218,8 @@
                     >
                       <TrashIcon class="h-4 w-4 mr-3 text-red-400" />
                       {{ $t('hosts.batchDelete') }}
-                    </button>
-                  </MenuItem>
+                      </button>
+                    </MenuItem>
                   </div>
                 </MenuItems>
             </Menu>
@@ -225,20 +234,11 @@
                 <div class="py-1">
                   <MenuItem v-slot="{ active }">
                     <button
-                      @click="handleExportCSV"
-                      :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
-                    >
-                      <ArrowDownTrayIcon class="h-4 w-4 mr-3 text-gray-400" />
-                      {{ $t('hosts.exportCSV') }}
-                    </button>
-                  </MenuItem>
-                  <MenuItem v-slot="{ active }">
-                    <button
-                      @click="showImportModal = true"
+                      @click="openDataImportModal"
                       :class="[active ? 'bg-gray-100' : '', 'flex items-center w-full px-4 py-2 text-sm text-gray-700']"
                     >
                       <ArrowUpTrayIcon class="h-4 w-4 mr-3 text-gray-400" />
-                      {{ $t('hosts.importCSV') }}
+                      {{ $t('hosts.dataImport') }}
                     </button>
                   </MenuItem>
                 </div>
@@ -1049,7 +1049,7 @@
             <div v-if="hostDetail.scan_ports.tcp && hostDetail.scan_ports.tcp.length > 0" class="mb-2">
               <span class="text-xs font-medium text-blue-600">TCP:</span>
               <span class="text-sm text-gray-700 ml-2">{{ hostDetail.scan_ports.tcp.join(', ') }}</span>
-            </div>
+        </div>
             <div v-if="hostDetail.scan_ports.udp && hostDetail.scan_ports.udp.length > 0">
               <span class="text-xs font-medium text-green-600">UDP:</span>
               <span class="text-sm text-gray-700 ml-2">{{ hostDetail.scan_ports.udp.join(', ') }}</span>
@@ -1064,50 +1064,6 @@
           class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
         >
           {{ $t('common.close') }}
-        </button>
-      </template>
-    </Modal>
-
-    <!-- CSV Import Modal -->
-    <Modal :open="showImportModal" @close="closeImportModal" :title="$t('hosts.csvImportTitle')" max-width="md">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">{{ $t('hosts.selectCSVFile') }}</label>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".csv"
-            @change="handleFileSelect"
-            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          <p class="mt-2 text-xs text-gray-500">
-            {{ $t('hosts.csvFormatHint') }}
-          </p>
-        </div>
-        <div v-if="importResult" class="p-3 rounded" :class="importResult.errors?.length > 0 ? 'bg-yellow-50' : 'bg-green-50'">
-          <p class="text-sm font-medium" :class="importResult.errors?.length > 0 ? 'text-yellow-800' : 'text-green-800'">
-            {{ importResult.message }}
-          </p>
-          <p v-if="importResult.data" class="text-xs mt-1" :class="importResult.errors?.length > 0 ? 'text-yellow-700' : 'text-green-700'">
-            {{ $t('hosts.created') }}: {{ importResult.data.created }}, {{ $t('hosts.updated') }}: {{ importResult.data.updated }}, {{ $t('hosts.errors') }}: {{ importResult.data.errors?.length || 0 }}
-          </p>
-        </div>
-      </div>
-      <template #footer>
-        <button
-          type="button"
-          @click="closeImportModal"
-          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-        >
-          {{ $t('common.close') }}
-        </button>
-        <button
-          type="button"
-          @click="handleImport"
-          :disabled="!selectedFile || importing"
-          class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50"
-        >
-          {{ importing ? $t('common.loading') : $t('common.import') }}
         </button>
       </template>
     </Modal>
@@ -1461,6 +1417,74 @@
       </template>
     </Modal>
 
+    <!-- Batch Add To Application Modal -->
+    <Modal
+      :open="showBatchAddToAppModal"
+      @close="closeBatchAddToAppModal"
+      :title="$t('hosts.batchAddToApplication')"
+      max-width="md"
+    >
+      <div v-if="loadingApplications" class="py-10">
+        <LoadingOverlay :loading="true" :text="$t('applications.loading')" />
+      </div>
+      <div v-else class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">{{ $t('applications.selectApplication') }} *</label>
+          <select
+            v-model="selectedApplicationId"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          >
+            <option v-for="app in applicationsOptions" :key="app.id" :value="app.id">
+              {{ app.name }} ({{ app.host_count ?? (app.hosts?.length || 0) }} {{ $t('applications.hostUnit') }})
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">{{ $t('applications.relationshipType') }}</label>
+          <select
+            v-model="selectedRelationshipType"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          >
+            <option value="member">{{ $t('applications.member') }}</option>
+            <option value="depends_on">{{ $t('applications.dependsOn') }}</option>
+            <option value="connects_to">{{ $t('applications.connectsTo') }}</option>
+            <option value="runs_on">{{ $t('applications.runsOn') }}</option>
+          </select>
+        </div>
+        <div class="border border-gray-200 rounded-md bg-gray-50 p-3">
+          <p class="text-sm text-gray-600">
+            {{ $t('hosts.selectedHostCount', { count: selectedHosts.length }) }}
+          </p>
+          <ul class="mt-2 max-h-32 overflow-y-auto text-sm text-gray-500">
+            <li
+              v-for="hostId in selectedHosts"
+              :key="hostId"
+              class="truncate"
+            >
+              {{ getHostDisplayLabel(hostId) }}
+            </li>
+          </ul>
+        </div>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          @click="closeBatchAddToAppModal"
+          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-colors"
+        >
+          {{ $t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          @click="batchAddHostsToApplication"
+          :disabled="addingToApplication || !selectedApplicationId"
+          class="inline-flex w-full justify-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 transition-colors"
+        >
+          {{ addingToApplication ? $t('applications.adding') : $t('applications.confirmAdd') }}
+        </button>
+      </template>
+    </Modal>
+
     <!-- Batch Delete Confirmation Modal -->
     <Modal :open="showBatchDeleteModal" @close="closeBatchDeleteModal" :title="$t('hosts.batchDelete')" max-width="md">
       <div class="space-y-4">
@@ -1520,6 +1544,184 @@
         </button>
       </template>
     </Modal>
+
+    <!-- Data Import Modal -->
+    <Modal
+      :open="showDataImportModal"
+      @close="closeDataImportModal"
+      :title="$t('hosts.dataImportTitle')"
+      max-width="3xl"
+    >
+      <div v-if="importMetadataLoading" class="py-12">
+        <LoadingOverlay :loading="true" :text="$t('hosts.loadingImportMetadata')" />
+      </div>
+      <div v-else class="space-y-6">
+        <section class="border border-gray-200 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">{{ $t('hosts.importStepTemplate') }}</h3>
+          <p class="text-xs text-gray-500 mb-4">{{ $t('hosts.importStepTemplateDescription') }}</p>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <label class="flex items-start space-x-3 rounded-lg border border-gray-200 p-3 hover:border-blue-400 cursor-pointer transition">
+              <input
+                type="radio"
+                value="empty"
+                v-model="importTemplateOption"
+                class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ $t('hosts.importTemplateOptionEmpty') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ $t('hosts.importTemplateOptionEmptyDesc') }}</p>
+              </div>
+            </label>
+            <label class="flex items-start space-x-3 rounded-lg border border-gray-200 p-3 hover:border-blue-400 cursor-pointer transition">
+              <input
+                type="radio"
+                value="not_collected"
+                v-model="importTemplateOption"
+                class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ $t('hosts.importTemplateOptionNotCollected') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ $t('hosts.importTemplateOptionNotCollectedDesc') }}</p>
+              </div>
+            </label>
+            <label class="flex items-start space-x-3 rounded-lg border border-gray-200 p-3 hover:border-blue-400 cursor-pointer transition">
+              <input
+                type="radio"
+                value="filtered"
+                v-model="importTemplateOption"
+                class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ $t('hosts.importTemplateOptionFiltered') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ $t('hosts.importTemplateOptionFilteredDesc') }}</p>
+              </div>
+            </label>
+          </div>
+          <div class="mt-4">
+            <button
+              type="button"
+              @click="downloadImportTemplate"
+              :disabled="templateDownloading"
+              class="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span
+                v-if="templateDownloading"
+                class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+              ></span>
+              {{ $t('hosts.downloadTemplateButton') }}
+            </button>
+          </div>
+        </section>
+
+        <section class="border border-gray-200 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">{{ $t('hosts.importStepUpload') }}</h3>
+          <p class="text-xs text-gray-500 mb-4">{{ $t('hosts.importStepUploadDescription') }}</p>
+          <div class="space-y-3">
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".csv"
+              @change="handleFileSelect"
+              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <p class="text-xs text-gray-500">
+              <span v-if="selectedFile">{{ $t('hosts.selectedFileLabel', { name: selectedFile.name }) }}</span>
+              <span v-else>{{ $t('hosts.noFileSelected') }}</span>
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                @click="handleImport"
+                :disabled="!selectedFile || importing"
+                class="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span
+                  v-if="importing"
+                  class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                ></span>
+                {{ importing ? $t('hosts.importing') : $t('hosts.startImportButton') }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="border border-gray-200 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">{{ $t('hosts.importFieldListTitle') }}</h3>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div
+              v-for="column in importColumnsSorted"
+              :key="column.key"
+              class="rounded-lg border border-dashed border-gray-200 p-3 bg-white"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-sm font-medium text-gray-900">
+                  {{ column.labelKey ? t(column.labelKey) : column.key }}
+                </p>
+                <span
+                  class="text-xs font-semibold"
+                  :class="column.required ? 'text-red-500' : 'text-gray-400'"
+                >
+                  {{ column.required ? $t('hosts.importFieldRequired') : $t('hosts.importFieldOptional') }}
+                </span>
+              </div>
+              <p v-if="column.descriptionKey" class="text-xs text-gray-500">
+                {{ t(column.descriptionKey) }}
+              </p>
+              <p v-if="column.example" class="text-xs text-gray-400 mt-1">
+                {{ $t('hosts.importFieldExample', { example: column.example }) }}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="importResult" class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">{{ $t('hosts.importResultTitle') }}</h3>
+          <p class="text-sm" :class="importHasErrors ? 'text-yellow-700' : 'text-green-700'">
+            {{ importResult.message }}
+          </p>
+          <p v-if="importResult.data" class="text-xs text-gray-600 mt-1">
+            {{ $t('hosts.importResultSummary', { created: importResult.data.created || 0, updated: importResult.data.updated || 0, errors: importErrors.length }) }}
+          </p>
+          <div v-if="importHasErrors" class="mt-3 border border-yellow-200 bg-yellow-50 rounded">
+            <div class="px-3 py-2 border-b border-yellow-200">
+              <p class="text-xs font-semibold text-yellow-800">{{ $t('hosts.importErrorsTitle') }}</p>
+            </div>
+            <div class="max-h-48 overflow-auto">
+              <table class="min-w-full divide-y divide-yellow-200 text-xs">
+                <thead class="bg-yellow-100">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-medium text-yellow-800 whitespace-nowrap">{{ $t('hosts.importErrorRow') }}</th>
+                    <th class="px-3 py-2 text-left font-medium text-yellow-800 whitespace-nowrap">{{ $t('hosts.importErrorIp') }}</th>
+                    <th class="px-3 py-2 text-left font-medium text-yellow-800">{{ $t('hosts.importErrorMessage') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-yellow-200">
+                  <tr
+                    v-for="errorItem in importErrors"
+                    :key="`${errorItem.row}-${errorItem.ip}-${errorItem.error}`"
+                  >
+                    <td class="px-3 py-2 text-yellow-900 whitespace-nowrap">{{ errorItem.row }}</td>
+                    <td class="px-3 py-2 text-yellow-900 whitespace-nowrap">{{ errorItem.ip }}</td>
+                    <td class="px-3 py-2 text-yellow-900">{{ errorItem.error }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+      <template #footer>
+        <div class="flex justify-end">
+          <button
+            type="button"
+            @click="closeDataImportModal"
+            class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            {{ $t('common.close') }}
+          </button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -1528,6 +1730,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { hostsApi, type Host } from '@/api/hosts'
+import { applicationsApi } from '@/api/applications'
 import { importApi } from '@/api/import'
 import { tagsApi } from '@/api/tags'
 import Modal from '@/components/Modal.vue'
@@ -1552,6 +1755,14 @@ interface ExportTemplateOption {
   descriptionKey?: string
   description?: string
   fields: string[]
+}
+
+interface ImportColumnDefinition {
+  key: string
+  labelKey?: string
+  descriptionKey?: string
+  required?: boolean
+  example?: string
 }
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
@@ -1609,7 +1820,6 @@ const expandedPlatforms = ref<Set<number>>(new Set())
 const expandedESXiHosts = ref<Set<string>>(new Set())
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
-const showImportModal = ref(false)
 const showMissingCredentialsModal = ref(false)
 const showBatchCredentialsModal = ref(false)
 const showTagManagementModal = ref(false)
@@ -1621,6 +1831,12 @@ const batchHostTagsMap = ref<Map<number, boolean>>(new Map()) // Track which tag
 const showBatchDeleteModal = ref(false)
 const batchDeleteConfirmText = ref('')
 const missingCredentialsHosts = ref<Array<{id: number, ip: string, hostname?: string}>>([])
+const showBatchAddToAppModal = ref(false)
+const applicationsOptions = ref<any[]>([])
+const selectedApplicationId = ref<number | null>(null)
+const selectedRelationshipType = ref('member')
+const loadingApplications = ref(false)
+const addingToApplication = ref(false)
 const batchCredentialsForm = ref({
   username: '',
   password: '',
@@ -1638,6 +1854,12 @@ const selectedFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const importing = ref(false)
 const importResult = ref<any>(null)
+const showDataImportModal = ref(false)
+const importTemplateOption = ref<'empty' | 'not_collected' | 'filtered'>('empty')
+const templateDownloading = ref(false)
+const importMetadata = ref<ImportColumnDefinition[]>([])
+const importMetadataLoading = ref(false)
+const importMetadataLoaded = ref(false)
 const showConfirmModal = ref(false)
 const confirmAction = ref<(() => void) | null>(null)
 const confirmMessage = ref('')
@@ -1712,6 +1934,21 @@ const exportFieldsByCategory = computed(() => {
 
 const allExportFieldKeys = computed(() => Object.keys(exportFieldDefinitionsMap.value))
 
+const importColumnsSorted = computed(() => {
+  const columns = [...importMetadata.value]
+  return columns.sort((a, b) => {
+    const aRequired = a.required ? 1 : 0
+    const bRequired = b.required ? 1 : 0
+    if (aRequired !== bRequired) {
+      return bRequired - aRequired
+    }
+    return a.key.localeCompare(b.key)
+  })
+})
+
+const importErrors = computed(() => importResult.value?.data?.errors || [])
+const importHasErrors = computed(() => importErrors.value.length > 0)
+
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 let collectingPollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -1755,6 +1992,92 @@ const buildHostQueryParams = (page?: number, includePaging = true) => {
 const buildExportFilters = () => {
   const params = buildHostQueryParams(undefined, false)
   return params
+}
+
+const loadImportMetadata = async () => {
+  if (importMetadataLoaded.value || importMetadataLoading.value) {
+    return
+  }
+  importMetadataLoading.value = true
+  try {
+    const response: any = await importApi.getHostImportMetadata()
+    if (response && response.code === 200) {
+      const columns = (response.data?.columns || []).map((column: any) => ({
+        key: column.key,
+        labelKey: column.label_key,
+        descriptionKey: column.description_key,
+        required: column.required,
+        example: column.example,
+      }))
+      importMetadata.value = columns
+      importMetadataLoaded.value = true
+    }
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('messages.loadFailed'))
+  } finally {
+    importMetadataLoading.value = false
+  }
+}
+
+const openDataImportModal = async () => {
+  importTemplateOption.value = 'empty'
+  selectedFile.value = null
+  importResult.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+  await loadImportMetadata()
+  showDataImportModal.value = true
+}
+
+const closeDataImportModal = () => {
+  showDataImportModal.value = false
+  templateDownloading.value = false
+  importing.value = false
+  importTemplateOption.value = 'empty'
+  selectedFile.value = null
+  importResult.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const downloadImportTemplate = async () => {
+  templateDownloading.value = true
+  try {
+    const params: Record<string, any> = { template: true }
+    if (importTemplateOption.value === 'not_collected') {
+      params.prepopulate = 'not_collected'
+    } else if (importTemplateOption.value === 'filtered') {
+      params.prepopulate = 'filtered'
+      Object.assign(params, buildExportFilters())
+    } else {
+      params.prepopulate = 'none'
+    }
+    
+    const response: any = await hostsApi.exportHostsCSV(params)
+    const blob =
+      response instanceof Blob
+        ? response
+        : new Blob([response], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const suffix =
+      importTemplateOption.value === 'empty'
+        ? 'template'
+        : importTemplateOption.value
+    link.download = `host_import_${suffix}_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toastStore.success(t('hosts.templateDownloadSuccess'))
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('hosts.templateDownloadFailed'))
+  } finally {
+    templateDownloading.value = false
+  }
 }
 
 const applyRouteQuery = () => {
@@ -2360,15 +2683,6 @@ const handleFileSelect = (event: Event) => {
   }
 }
 
-const closeImportModal = () => {
-  showImportModal.value = false
-  selectedFile.value = null
-  importResult.value = null
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
-}
-
 const handleImport = async () => {
   if (!selectedFile.value) return
   importing.value = true
@@ -2378,14 +2692,14 @@ const handleImport = async () => {
     if (response.data?.errors?.length === 0) {
       const importResponse: any = response
     toastStore.success(importResponse.message || t('hosts.importSuccess'))
-      loadHosts(1)
       setTimeout(() => {
-        closeImportModal()
+        closeDataImportModal()
       }, 2000)
     } else {
       const importResponse: any = response
       toastStore.warning(importResponse.message || t('hosts.importWithErrors'))
     }
+    loadHosts(1)
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('messages.operationFailed'))
   } finally {
@@ -2458,31 +2772,6 @@ const formatBytes = (bytes: number, unit: 'GB' | 'MB' = 'GB'): string => {
   } else {
     const mb = bytes / (1024 * 1024)
     return `${mb.toFixed(2)}MB`
-  }
-}
-
-const handleExportCSV = async () => {
-  try {
-    const includeCredentials = confirm(t('hosts.credentials'))
-    const response = await hostsApi.exportHostsCSV({
-      include_credentials: includeCredentials,
-      search: searchQuery.value || undefined,
-    })
-    
-    // Create blob and download
-    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `hosts_export_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    toastStore.success(t('hosts.exportSuccess'))
-  } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('messages.operationFailed'))
   }
 }
 
@@ -2862,6 +3151,74 @@ const loadBatchHostCurrentTags = async () => {
     console.error('Failed to load batch host current tags:', error)
     batchSelectedTagIds.value = []
   }
+}
+
+const loadApplicationsForBatch = async () => {
+  loadingApplications.value = true
+  try {
+    const response = await applicationsApi.getApplications()
+    applicationsOptions.value = response.data || []
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('applications.loadFailed'))
+    applicationsOptions.value = []
+  } finally {
+    loadingApplications.value = false
+  }
+}
+
+const openBatchAddToAppModal = async () => {
+  if (selectedHosts.value.length === 0) {
+    toastStore.warning(t('hosts.noHostsSelected'))
+    return
+  }
+  await loadApplicationsForBatch()
+  if (applicationsOptions.value.length === 0) {
+    toastStore.info(t('applications.noAppsForSelection'))
+    return
+  }
+  selectedApplicationId.value = applicationsOptions.value[0]?.id ?? null
+  selectedRelationshipType.value = 'member'
+  showBatchAddToAppModal.value = true
+}
+
+const closeBatchAddToAppModal = () => {
+  showBatchAddToAppModal.value = false
+  selectedApplicationId.value = null
+  selectedRelationshipType.value = 'member'
+}
+
+const batchAddHostsToApplication = async () => {
+  if (!selectedApplicationId.value) {
+    toastStore.warning(t('applications.selectApplicationFirst'))
+    return
+  }
+  if (selectedHosts.value.length === 0) {
+    toastStore.warning(t('hosts.noHostsSelected'))
+    return
+  }
+  addingToApplication.value = true
+  try {
+    await applicationsApi.addHosts(
+      selectedApplicationId.value,
+      selectedHosts.value,
+      selectedRelationshipType.value
+    )
+    toastStore.success(t('applications.batchAddSuccess', { count: selectedHosts.value.length }))
+    closeBatchAddToAppModal()
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('applications.batchAddFailed'))
+  } finally {
+    addingToApplication.value = false
+  }
+}
+
+const getHostDisplayLabel = (hostId: number) => {
+  const host = hosts.value.find(item => item.id === hostId)
+  if (!host) return `${hostId}`
+  if (host.hostname) {
+    return `${host.ip} - ${host.hostname}`
+  }
+  return host.ip || `${hostId}`
 }
 
 const saveBatchHostTags = async () => {

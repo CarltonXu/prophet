@@ -77,13 +77,8 @@ export const hostsApi = {
   batchUpdateHosts: (hosts: Array<Partial<Host> & { id: number }>) =>
     apiClient.post('/hosts/batch/update', { hosts }),
   
-  exportHostsCSV: (params?: {
-    include_credentials?: boolean
-    search?: string
-    os_type?: string
-    device_type?: string
-    tag_id?: number
-  }) => apiClient.get('/hosts/export/csv', { params, responseType: 'blob' }),
+  exportHostsCSV: (params?: Record<string, any>) =>
+    apiClient.get('/hosts/export/csv', { params, responseType: 'blob' }),
   
   batchUpdateCredentials: (host_ids: number[], credentials: HostCredential) =>
     apiClient.post('/hosts/batch/credentials', { host_ids, credentials }),

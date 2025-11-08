@@ -300,6 +300,134 @@ HOST_EXPORT_OPTIONS = [
     selectinload(Host.platform),
 ]
 
+HOST_TEMPLATE_EXPORT_OPTIONS = [
+    selectinload(Host.credentials),
+    selectinload(Host.tags),
+]
+
+HOST_IMPORT_TEMPLATE_COLUMNS = [
+    {
+        'key': 'ip',
+        'label': 'IP',
+        'label_key': 'hosts.importFields.ip',
+        'description_key': 'hosts.importFields.ipDesc',
+        'required': True,
+        'example': '192.168.1.10'
+    },
+    {
+        'key': 'hostname',
+        'label': 'Hostname',
+        'label_key': 'hosts.importFields.hostname',
+        'description_key': 'hosts.importFields.hostnameDesc',
+        'required': False,
+        'example': 'web-server-01'
+    },
+    {
+        'key': 'mac',
+        'label': 'MAC',
+        'label_key': 'hosts.importFields.mac',
+        'description_key': 'hosts.importFields.macDesc',
+        'required': False,
+        'example': '00:16:3e:3d:4f:5a'
+    },
+    {
+        'key': 'vendor',
+        'label': 'Vendor',
+        'label_key': 'hosts.importFields.vendor',
+        'description_key': 'hosts.importFields.vendorDesc',
+        'required': False,
+        'example': 'Dell'
+    },
+    {
+        'key': 'os_type',
+        'label': 'OS Type',
+        'label_key': 'hosts.importFields.osType',
+        'description_key': 'hosts.importFields.osTypeDesc',
+        'required': False,
+        'example': 'CentOS'
+    },
+    {
+        'key': 'os_version',
+        'label': 'OS Version',
+        'label_key': 'hosts.importFields.osVersion',
+        'description_key': 'hosts.importFields.osVersionDesc',
+        'required': False,
+        'example': '7.9'
+    },
+    {
+        'key': 'device_type',
+        'label': 'Device Type',
+        'label_key': 'hosts.importFields.deviceType',
+        'description_key': 'hosts.importFields.deviceTypeDesc',
+        'required': False,
+        'example': 'host'
+    },
+    {
+        'key': 'is_physical',
+        'label': 'Is Physical',
+        'label_key': 'hosts.importFields.isPhysical',
+        'description_key': 'hosts.importFields.isPhysicalDesc',
+        'required': False,
+        'example': '是/否'
+    },
+    {
+        'key': 'vt_platform',
+        'label': 'Virtualization Platform',
+        'label_key': 'hosts.importFields.vtPlatform',
+        'description_key': 'hosts.importFields.vtPlatformDesc',
+        'required': False,
+        'example': 'VMware'
+    },
+    {
+        'key': 'vt_platform_ver',
+        'label': 'Virtualization Version',
+        'label_key': 'hosts.importFields.vtPlatformVer',
+        'description_key': 'hosts.importFields.vtPlatformVerDesc',
+        'required': False,
+        'example': '7.0'
+    },
+    {
+        'key': 'username',
+        'label': 'Username',
+        'label_key': 'hosts.importFields.username',
+        'description_key': 'hosts.importFields.usernameDesc',
+        'required': False,
+        'example': 'root'
+    },
+    {
+        'key': 'password',
+        'label': 'Password',
+        'label_key': 'hosts.importFields.password',
+        'description_key': 'hosts.importFields.passwordDesc',
+        'required': False,
+        'example': ''
+    },
+    {
+        'key': 'ssh_port',
+        'label': 'SSH Port',
+        'label_key': 'hosts.importFields.sshPort',
+        'description_key': 'hosts.importFields.sshPortDesc',
+        'required': False,
+        'example': '22'
+    },
+    {
+        'key': 'key_path',
+        'label': 'Key Path',
+        'label_key': 'hosts.importFields.keyPath',
+        'description_key': 'hosts.importFields.keyPathDesc',
+        'required': False,
+        'example': '/home/user/.ssh/id_rsa'
+    },
+    {
+        'key': 'tags',
+        'label': 'Tags',
+        'label_key': 'hosts.importFields.tags',
+        'description_key': 'hosts.importFields.tagsDesc',
+        'required': False,
+        'example': '生产,web'
+    },
+]
+
 
 bp = Blueprint('hosts', __name__)
 
@@ -1034,42 +1162,96 @@ def get_hosts_tree():
 @bp.route('/export/csv', methods=['GET'])
 @jwt_required()
 def export_hosts_csv():
-    """Export hosts to CSV with credentials"""
-    include_credentials = request.args.get('include_credentials', 'false').lower() == 'true'
+    """Export host data to CSV or generate import template"""
+    template_flag = str(request.args.get('template', '')).lower() in ('1', 'true', 'yes', 'template')
+    filter_keys = [
+        'search', 'search_field', 'os_type', 'device_type', 'collection_status',
+        'source', 'is_physical', 'tag_id', 'platform_id'
+    ]
+    filters = {key: request.args.get(key) for key in filter_keys}
     
-    # Get filter parameters
-    search = request.args.get('search')
-    os_type = request.args.get('os_type')
-    device_type = request.args.get('device_type')
-    tag_id = request.args.get('tag_id')
-    
-    query = Host.query.filter(Host.deleted_at == None)
-    
-    if search:
-        query = query.filter(
-            or_(
-                Host.hostname.contains(search),
-                Host.ip.contains(search),
-                Host.mac.contains(search)
-            )
+    if template_flag:
+        prepopulate = (request.args.get('prepopulate') or 'none').lower()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([column['key'] for column in HOST_IMPORT_TEMPLATE_COLUMNS])
+        
+        hosts = []
+        if prepopulate in ('filtered', 'not_collected'):
+            template_filters = {key: value for key, value in filters.items()}
+            if prepopulate == 'not_collected':
+                template_filters['collection_status'] = 'not_collected'
+            query = Host.query.options(*HOST_TEMPLATE_EXPORT_OPTIONS).filter(Host.deleted_at == None)
+            query = _apply_host_filters(query, template_filters)
+            hosts = query.order_by(Host.id.asc()).all()
+        
+        for host in hosts:
+            credential = host.credentials[0] if host.credentials else None
+            row = []
+            for column in HOST_IMPORT_TEMPLATE_COLUMNS:
+                key = column['key']
+                value = ''
+                if key == 'ip':
+                    value = host.ip or ''
+                elif key == 'hostname':
+                    value = host.hostname or ''
+                elif key == 'mac':
+                    value = host.mac or ''
+                elif key == 'vendor':
+                    value = host.vendor or ''
+                elif key == 'os_type':
+                    value = host.os_type or ''
+                elif key == 'os_version':
+                    value = host.os_version or ''
+                elif key == 'device_type':
+                    value = host.device_type or ''
+                elif key == 'is_physical':
+                    value = '是' if host.is_physical else '否'
+                elif key == 'vt_platform':
+                    value = host.vt_platform or ''
+                elif key == 'vt_platform_ver':
+                    value = host.vt_platform_ver or ''
+                elif key == 'username':
+                    value = credential.username if credential else ''
+                elif key == 'password':
+                    value = ''
+                elif key == 'ssh_port':
+                    value = credential.ssh_port if credential and credential.ssh_port else ''
+                elif key == 'key_path':
+                    value = credential.key_path if credential and credential.key_path else ''
+                elif key == 'tags':
+                    value = ','.join(sorted({tag.name for tag in host.tags})) if host.tags else ''
+                else:
+                    attr = getattr(host, key, None)
+                    value = attr if attr is not None else ''
+                row.append(value)
+            writer.writerow(row)
+        
+        output.seek(0)
+        suffix_map = {
+            'not_collected': 'not_collected',
+            'filtered': 'filtered',
+        }
+        suffix = suffix_map.get(prepopulate, 'template')
+        filename = f'host_import_{suffix}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv; charset=utf-8',
+            headers={
+                'Content-Disposition': f'attachment; filename={filename}'
+            }
         )
     
-    if os_type:
-        query = query.filter_by(os_type=os_type)
+    # Regular export branch
+    include_credentials = str(request.args.get('include_credentials', 'false')).lower() == 'true'
+    query = Host.query.options(selectinload(Host.credentials)).filter(Host.deleted_at == None)
+    query = _apply_host_filters(query, filters)
+    hosts = query.order_by(Host.id.asc()).all()
     
-    if device_type:
-        query = query.filter_by(device_type=device_type)
-    
-    if tag_id:
-        query = query.join(HostTagRelation).filter(HostTagRelation.tag_id == tag_id)
-    
-    hosts = query.all()
-    
-    # Create CSV
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write header
     header = [
         'ID', '主机名', 'IP', 'Mac', '厂商', '操作系统类型', '操作系统版本', '操作系统内核',
         '操作系统位数', '启动方式', 'CPU信息', 'CPU核数', '内存(GB)', '剩余内存(GB)',
@@ -1082,7 +1264,6 @@ def export_hosts_csv():
     
     writer.writerow(header)
     
-    # Write data
     for host in hosts:
         row = [
             host.id,
@@ -1112,11 +1293,17 @@ def export_hosts_csv():
         ]
         
         if include_credentials:
-            credential = HostCredential.query.filter_by(host_id=host.id).first()
+            credential = host.credentials[0] if host.credentials else None
             if credential:
+                password_plain = ''
+                if credential.password_encrypted:
+                    try:
+                        password_plain = decrypt_password(credential.password_encrypted)
+                    except Exception:
+                        password_plain = ''
                 row.extend([
                     credential.username or '',
-                    decrypt_password(credential.password_encrypted) if credential.password_encrypted else '',
+                    password_plain,
                     credential.ssh_port or 22,
                     credential.key_path or ''
                 ])
@@ -1207,15 +1394,6 @@ def _apply_host_filters(query, filters):
             pass
     
     return query
-
-
-def _bytes_to_gb(value):
-    if not value:
-        return ''
-    try:
-        return round(value / (1024 ** 3), 2)
-    except Exception:
-        return ''
 
 
 def _resolve_esxi_name(host):

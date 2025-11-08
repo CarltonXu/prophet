@@ -7,7 +7,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from utils.jwt import get_current_user_id
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 from models import Application, ApplicationHost, Host, HostRelationship, db
 from utils.decorators import validate_json
@@ -138,6 +138,47 @@ def add_hosts_to_application(app_id):
     })
 
 
+@bp.route('/<int:app_id>/hosts/<int:host_id>', methods=['DELETE'])
+@jwt_required()
+def remove_host_from_application(app_id, host_id):
+    """Remove a host from application"""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    
+    relation = ApplicationHost.query.filter_by(application_id=app_id, host_id=host_id).first()
+    if not relation:
+        return jsonify({
+            'code': 404,
+            'message': 'Host is not associated with the application'
+        }), 404
+    
+    db.session.delete(relation)
+    db.session.flush()
+    
+    remaining_host_ids = {
+        ah.host_id for ah in ApplicationHost.query.filter_by(application_id=app_id).all()
+    }
+    
+    host_relationships = HostRelationship.query.filter(
+        or_(
+            HostRelationship.from_host_id == host_id,
+            HostRelationship.to_host_id == host_id
+        )
+    ).all()
+    
+    for relation in host_relationships:
+        if (relation.from_host_id not in remaining_host_ids and
+                relation.to_host_id not in remaining_host_ids):
+            db.session.delete(relation)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'code': 200,
+        'message': 'Host removed from application',
+        'data': application.to_dict(include_hosts=True)
+    })
+
+
 @bp.route('/<int:app_id>/graph', methods=['GET'])
 @jwt_required()
 def get_application_graph(app_id):
@@ -152,12 +193,63 @@ def get_application_graph(app_id):
         HostRelationship.to_host_id.in_(host_ids)
     ).all()
     
+    node_payload = []
+    for host in application.hosts:
+        node_payload.append({
+            'id': host.id,
+            'label': host.hostname or host.ip or f'Host {host.id}',
+            'title': f"{host.ip or '-'}\n{host.hostname or ''}",
+            'group': host.device_type or 'host',
+            'is_physical': host.is_physical,
+            'ip': host.ip,
+            'hostname': host.hostname,
+            'os_type': host.os_type,
+            'tags': [tag.to_dict() for tag in host.tags]
+        })
+    
+    edge_palette = {
+        'depends_on': '#2563EB',
+        'connects_to': '#0EA5E9',
+        'runs_on': '#10B981',
+        'member': '#6B7280'
+    }
+    
+    edge_payload = []
+    for relation in relationships:
+        edge_payload.append({
+            'id': relation.id,
+            'from': relation.from_host_id,
+            'to': relation.to_host_id,
+            'label': relation.relationship_type,
+            'title': relation.description or relation.relationship_type,
+            'color': edge_palette.get(relation.relationship_type, '#6B7280'),
+            'arrows': 'to'
+        })
+    
     return jsonify({
         'code': 200,
         'data': {
-            'hosts': [h.to_dict() for h in application.hosts],
-            'relationships': [r.to_dict() for r in relationships]
+            'nodes': node_payload,
+            'edges': edge_payload
         }
+    })
+
+
+@bp.route('/<int:app_id>/relationships', methods=['GET'])
+@jwt_required()
+def get_application_relationships(app_id):
+    """List relationships for an application"""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    host_ids = [h.id for h in application.hosts]
+    
+    relationships = HostRelationship.query.filter(
+        HostRelationship.from_host_id.in_(host_ids),
+        HostRelationship.to_host_id.in_(host_ids)
+    ).all()
+    
+    return jsonify({
+        'code': 200,
+        'data': [r.to_dict() for r in relationships]
     })
 
 
@@ -204,4 +296,58 @@ def create_relationship(app_id):
         'message': 'Relationship created',
         'data': relationship.to_dict()
     }), 201
+
+
+@bp.route('/<int:app_id>/relationships/<int:relationship_id>', methods=['PUT'])
+@jwt_required()
+def update_relationship(app_id, relationship_id):
+    """Update host relationship"""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    data = request.json or {}
+    
+    relationship = HostRelationship.query.filter_by(id=relationship_id).first_or_404()
+    
+    # Ensure both hosts belong to the application
+    host_ids = [h.id for h in application.hosts]
+    if relationship.from_host_id not in host_ids or relationship.to_host_id not in host_ids:
+        return jsonify({
+            'code': 400,
+            'message': 'Relationship hosts must belong to the application'
+        }), 400
+    
+    if 'relationship_type' in data:
+        relationship.relationship_type = data['relationship_type']
+    if 'description' in data:
+        relationship.description = data['description']
+    
+    db.session.commit()
+    
+    return jsonify({
+        'code': 200,
+        'message': 'Relationship updated',
+        'data': relationship.to_dict()
+    })
+
+
+@bp.route('/<int:app_id>/relationships/<int:relationship_id>', methods=['DELETE'])
+@jwt_required()
+def delete_relationship(app_id, relationship_id):
+    """Delete host relationship"""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    relationship = HostRelationship.query.filter_by(id=relationship_id).first_or_404()
+    
+    host_ids = [h.id for h in application.hosts]
+    if relationship.from_host_id not in host_ids or relationship.to_host_id not in host_ids:
+        return jsonify({
+            'code': 400,
+            'message': 'Relationship hosts must belong to the application'
+        }), 400
+    
+    db.session.delete(relationship)
+    db.session.commit()
+    
+    return jsonify({
+        'code': 200,
+        'message': 'Relationship deleted'
+    })
 

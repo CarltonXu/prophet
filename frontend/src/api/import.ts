@@ -10,5 +10,6 @@ export const importApi = {
       },
     })
   },
+  getHostImportMetadata: () => apiClient.get('/import/csv/hosts/metadata'),
 }
 

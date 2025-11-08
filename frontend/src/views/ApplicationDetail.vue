@@ -18,7 +18,7 @@
           {{ $t('applications.addHost') }}
         </button>
         <button
-          @click="showAddRelationshipModal = true"
+          @click="openAddRelationshipModal"
           class="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors"
         >
           {{ $t('applications.addRelationship') }}
@@ -43,29 +43,155 @@
         </div>
       </div>
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">{{ $t('applications.hostList') }}</h2>
-        <div v-if="hosts.length === 0" class="text-center py-8 text-gray-500">
+      <div class="bg-white shadow rounded-lg p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-medium text-gray-900">{{ $t('applications.hostList') }}</h2>
+            <p class="text-sm text-gray-500">{{ $t('applications.hostListSubtitle') }}</p>
+          </div>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+              <MagnifyingGlassIcon class="h-4 w-4" />
+            </span>
+            <input
+              v-model="hostSearchTerm"
+              type="text"
+              :placeholder="$t('applications.hostSearchPlaceholder')"
+              class="pl-9 pr-3 py-2 rounded-md border border-gray-300 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div class="rounded-md border border-blue-100 bg-blue-50 p-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-blue-600">{{ $t('applications.totalHosts') }}</p>
+            <p class="mt-2 text-xl font-bold text-blue-900">{{ summaryStats.totalHosts }}</p>
+          </div>
+          <div class="rounded-md border border-emerald-100 bg-emerald-50 p-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">{{ $t('applications.physicalHosts') }}</p>
+            <p class="mt-2 text-xl font-bold text-emerald-900">{{ summaryStats.physicalHosts }}</p>
+          </div>
+          <div class="rounded-md border border-purple-100 bg-purple-50 p-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-purple-600">{{ $t('applications.virtualHosts') }}</p>
+            <p class="mt-2 text-xl font-bold text-purple-900">{{ summaryStats.virtualHosts }}</p>
+          </div>
+        </div>
+
+        <div v-if="filteredHosts.length === 0" class="text-center py-8 text-gray-500">
           <ServerIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
-          <p>{{ $t('applications.noHosts') }}</p>
+          <p>{{ hostSearchTerm ? $t('applications.noHostSearchResults') : $t('applications.noHosts') }}</p>
         </div>
         <table v-else class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.ip') }}</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.hostname') }}</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.osType') }}</th>
+              <th @click="setSortKey('ip')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer">
+                {{ $t('hosts.ip') }}
+              </th>
+              <th @click="setSortKey('hostname')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer">
+                {{ $t('hosts.hostname') }}
+              </th>
+              <th @click="setSortKey('os_type')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer">
+                {{ $t('hosts.osType') }}
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.cpuInfo') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.memory') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.disk') }}</th>
+              <th @click="setSortKey('device_type')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer">
+                {{ $t('hosts.deviceType') }}
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.tags') }}</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('common.operation') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="host in hosts" :key="host.id" class="hover:bg-gray-50">
+            <tr v-for="host in filteredHosts" :key="host.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ host.ip }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.hostname || '-' }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.os_type || '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div class="flex flex-col">
+                  <span>{{ host.cpu_info || '-' }}</span>
+                  <span v-if="host.cpu_cores" class="text-xs text-gray-400">{{ $t('hosts.cpuCores') }}: {{ host.cpu_cores }}</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMetric(host.memory_total) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMetric(host.disk_total_size) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{{ host.device_type || '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="tag in getHostTags(host)"
+                    :key="tag.id"
+                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    :style="tag.color ? { backgroundColor: tag.color + '20', color: tag.color } : {}"
+                  >
+                    {{ tag.name }}
+                  </span>
+                  <span v-if="getHostTags(host).length === 0" class="text-gray-400">{{ $t('applications.noTags') }}</span>
+                </div>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
                   @click="removeHost(host.id!)"
+                  class="text-red-600 hover:text-red-900 transition-colors"
+                >
+                  {{ $t('common.delete') }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-medium text-gray-900">{{ $t('applications.relationshipList') }}</h2>
+            <p class="text-sm text-gray-500">{{ $t('applications.relationshipListSubtitle') }}</p>
+          </div>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+              <MagnifyingGlassIcon class="h-4 w-4" />
+            </span>
+            <input
+              v-model="relationshipSearchTerm"
+              type="text"
+              :placeholder="$t('applications.relationshipSearchPlaceholder')"
+              class="pl-9 pr-3 py-2 rounded-md border border-gray-300 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+            />
+          </div>
+        </div>
+        <div v-if="filteredRelationships.length === 0" class="text-center py-6 text-gray-500">
+          <ShareIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+          <p>{{ relationshipSearchTerm ? $t('applications.noRelationshipSearchResults') : $t('applications.noRelationships') }}</p>
+        </div>
+        <table v-else class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('applications.sourceHost') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('applications.targetHost') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('applications.relationshipType') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('applications.description') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('common.operation') }}</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="relation in filteredRelationships" :key="relation.id" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ getHostLabel(relation.from_host_id) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ getHostLabel(relation.to_host_id) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{{ relation.relationship_type }}</td>
+              <td class="px-6 py-4 text-sm text-gray-500">
+                {{ relation.description || '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                <button
+                  @click="editRelationship(relation)"
+                  class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                >
+                  {{ $t('common.edit') }}
+                </button>
+                <button
+                  @click="deleteRelationship(relation)"
                   class="text-red-600 hover:text-red-900 transition-colors"
                 >
                   {{ $t('common.delete') }}
@@ -82,55 +208,39 @@
           <ShareIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
           <p>{{ $t('applications.noRelationshipData') }}</p>
         </div>
-        <div v-else class="border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[400px]">
-          <!-- Simple graph visualization using SVG -->
-          <svg :width="graphWidth" :height="graphHeight" class="w-full h-full">
-            <!-- Draw edges -->
-            <line
-              v-for="edge in graphData.edges"
-              :key="`${edge.from}-${edge.to}`"
-              :x1="getNodePosition(edge.from).x"
-              :y1="getNodePosition(edge.from).y"
-              :x2="getNodePosition(edge.to).x"
-              :y2="getNodePosition(edge.to).y"
-              stroke="#6B7280"
-              stroke-width="2"
-              marker-end="url(#arrowhead)"
-            />
-            <!-- Draw nodes -->
-            <g v-for="node in graphData.nodes" :key="node.id">
-              <circle
-                :cx="node.x"
-                :cy="node.y"
-                :r="30"
-                fill="#3B82F6"
-                stroke="#1E40AF"
-                stroke-width="2"
-              />
-              <text
-                :x="node.x"
-                :y="node.y"
-                text-anchor="middle"
-                dominant-baseline="middle"
-                class="text-xs fill-white font-medium"
+        <div v-else class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                v-for="layout in ['force', 'hierarchical', 'grid']"
+                :key="layout"
+                @click="selectedLayout = layout as any"
+                :class="[
+                  'px-3 py-1.5 text-sm rounded-md border transition-colors',
+                  selectedLayout === layout
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                ]"
               >
-                {{ node.label.substring(0, 8) }}
-              </text>
-            </g>
-            <!-- Arrow marker definition -->
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="10"
-                markerHeight="10"
-                refX="9"
-                refY="3"
-                orient="auto"
-              >
-                <polygon points="0 0, 10 3, 0 6" fill="#6B7280" />
-              </marker>
-            </defs>
-          </svg>
+                {{ $t(`applications.layout.${layout}`) }}
+              </button>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-gray-500">
+              <div class="flex items-center gap-1">
+                <span class="inline-block h-3 w-3 rounded-full bg-blue-500 border border-blue-700"></span>
+                <span>{{ $t('applications.legendPhysical') }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="inline-block h-3 w-3 rounded-full bg-emerald-500 border border-emerald-700"></span>
+                <span>{{ $t('applications.legendVirtual') }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="inline-block h-3 w-3 rounded-full bg-orange-500 border border-orange-700"></span>
+                <span>{{ $t('applications.legendNetwork') }}</span>
+              </div>
+            </div>
+          </div>
+          <div ref="networkContainer" class="w-full h-[420px] border border-gray-200 rounded-lg bg-white"></div>
         </div>
       </div>
     </div>
@@ -179,7 +289,12 @@
     </Modal>
 
     <!-- Add Relationship Modal -->
-    <Modal :open="showAddRelationshipModal" @close="closeAddRelationshipModal" :title="$t('applications.addRelationship')" max-width="md">
+    <Modal
+      :open="showAddRelationshipModal"
+      @close="closeAddRelationshipModal"
+      :title="editingRelationshipId ? $t('applications.editRelationshipTitle') : $t('applications.addRelationshipTitle')"
+      max-width="md"
+    >
       <form @submit.prevent="addRelationship" class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700">{{ $t('applications.sourceHost') }} *</label>
@@ -244,7 +359,7 @@
           :disabled="adding"
           class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50 transition-colors"
         >
-          {{ adding ? $t('applications.adding') : $t('applications.add') }}
+          {{ adding ? $t('applications.adding') : (editingRelationshipId ? $t('applications.update') : $t('applications.add')) }}
         </button>
       </template>
     </Modal>
@@ -261,7 +376,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { applicationsApi, type HostRelationship } from '@/api/applications'
@@ -269,7 +384,9 @@ import { hostsApi } from '@/api/hosts'
 import Modal from '@/components/Modal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useToastStore } from '@/stores/toast'
-import { ServerIcon, ShareIcon } from '@heroicons/vue/24/outline'
+import { ServerIcon, ShareIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { Network } from 'vis-network'
+import 'vis-network/styles/vis-network.css'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -289,13 +406,108 @@ const relationshipForm = ref<Partial<HostRelationship>>({})
 const showConfirmModal = ref(false)
 const confirmAction = ref<(() => void) | null>(null)
 const confirmMessage = ref('')
+const hostSearchTerm = ref('')
+const sortKey = ref<'ip' | 'hostname' | 'os_type' | 'device_type'>('ip')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const relationships = ref<any[]>([])
+const relationshipSearchTerm = ref('')
+const editingRelationshipId = ref<number | null>(null)
+const networkContainer = ref<HTMLDivElement | null>(null)
+const networkInstance = ref<Network | null>(null)
+const selectedLayout = ref<'force' | 'hierarchical' | 'grid'>('force')
 
-const graphWidth = 800
-const graphHeight = 400
+interface HostTag {
+  id?: number
+  name?: string
+  color?: string
+}
 
-const getNodePosition = (hostId: number) => {
-  const node = graphData.value.nodes.find(n => n.id === hostId)
-  return node ? { x: node.x, y: node.y } : { x: 0, y: 0 }
+const filteredHosts = computed(() => {
+  const keyword = hostSearchTerm.value.trim().toLowerCase()
+  let result = hosts.value.slice()
+  if (keyword) {
+    result = result.filter((host) => {
+      const ip = host.ip?.toLowerCase() || ''
+      const hostname = host.hostname?.toLowerCase() || ''
+      const osType = host.os_type?.toLowerCase() || ''
+      const tags: string[] = Array.isArray(host.tags)
+        ? host.tags.map((t: HostTag) => t.name?.toLowerCase() || '')
+        : []
+      return (
+        ip.includes(keyword) ||
+        hostname.includes(keyword) ||
+        osType.includes(keyword) ||
+        tags.some((tag: string) => tag.includes(keyword))
+      )
+    })
+  }
+  result.sort((a, b) => {
+    const aValue = (a[sortKey.value] ?? '').toString().toLowerCase()
+    const bValue = (b[sortKey.value] ?? '').toString().toLowerCase()
+    if (aValue < bValue) return sortOrder.value === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortOrder.value === 'asc' ? 1 : -1
+    return 0
+  })
+  return result
+})
+
+const summaryStats = computed(() => ({
+  totalHosts: hosts.value.length,
+  physicalHosts: hosts.value.filter((host) => host.is_physical).length,
+  virtualHosts: hosts.value.filter((host) => host.is_physical === false).length
+}))
+
+const filteredRelationships = computed(() => {
+  const keyword = relationshipSearchTerm.value.trim().toLowerCase()
+  if (!keyword) return relationships.value
+  return relationships.value.filter((relation) => {
+    const fromHost = getHostLabel(relation.from_host_id).toLowerCase()
+    const toHost = getHostLabel(relation.to_host_id).toLowerCase()
+    const type = relation.relationship_type?.toLowerCase() || ''
+    const description = relation.description?.toLowerCase() || ''
+    return (
+      fromHost.includes(keyword) ||
+      toHost.includes(keyword) ||
+      type.includes(keyword) ||
+      description.includes(keyword)
+    )
+  })
+})
+
+const setSortKey = (key: 'ip' | 'hostname' | 'os_type' | 'device_type') => {
+  if (sortKey.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortOrder.value = 'asc'
+  }
+}
+
+const formatMetric = (value?: number, suffix = 'GB') => {
+  if (value === null || value === undefined) return '-'
+  const rounded = Math.round((value + Number.EPSILON) * 100) / 100
+  return `${rounded} ${suffix}`
+}
+
+const getHostTags = (host: any): HostTag[] => {
+  if (!Array.isArray(host.tags) || host.tags.length === 0) return []
+  return host.tags
+}
+
+const getHostLabel = (hostId: number) => {
+  const host = hosts.value.find((item) => item.id === hostId)
+  if (!host) return `#${hostId}`
+  return host.hostname || host.ip || `#${hostId}`
+}
+
+const loadRelationships = async () => {
+  try {
+    const appId = parseInt(route.params.id as string)
+    const response = await applicationsApi.getRelationships(appId)
+    relationships.value = response.data || []
+  } catch (error: any) {
+    toastStore.error(error.response?.data?.message || t('applications.loadRelationshipsFailed'))
+  }
 }
 
 const loadApplication = async () => {
@@ -307,17 +519,22 @@ const loadApplication = async () => {
 
   loading.value = true
   try {
-    const [appRes, graphRes] = await Promise.all([
+    const [appRes, graphRes, relationshipRes] = await Promise.all([
       applicationsApi.getApplication(appId),
       applicationsApi.getGraph(appId).catch(() => ({ data: { nodes: [], edges: [] } })),
+      applicationsApi.getRelationships(appId).catch(() => ({ data: [] }))
     ])
     application.value = appRes.data
     graphData.value = graphRes.data || { nodes: [], edges: [] }
+    relationships.value = relationshipRes.data || []
     
     // Load hosts from application
     if (application.value.hosts) {
       hosts.value = application.value.hosts
     }
+    await loadAvailableHosts()
+    await nextTick()
+    renderNetwork()
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('applications.loadFailed'))
     router.push('/applications')
@@ -359,13 +576,14 @@ const addHosts = async () => {
   }
 }
 
-const removeHost = async (_hostId: number) => {
+const removeHost = async (hostId: number) => {
   confirmMessage.value = t('applications.confirmRemoveMessage')
   confirmAction.value = async () => {
     try {
-      // Note: API might need a remove endpoint, for now we'll just reload
-      toastStore.info(t('common.info'))
-      loadApplication()
+      const appId = parseInt(route.params.id as string)
+      await applicationsApi.removeHost(appId, hostId)
+      toastStore.success(t('applications.removeHostSuccess'))
+      await loadApplication()
     } catch (error: any) {
       toastStore.error(error.response?.data?.message || t('applications.removeHostFailed'))
     }
@@ -383,6 +601,7 @@ const handleConfirm = () => {
 
 const closeAddRelationshipModal = () => {
   showAddRelationshipModal.value = false
+  editingRelationshipId.value = null
   relationshipForm.value = {}
 }
 
@@ -390,20 +609,195 @@ const addRelationship = async () => {
   adding.value = true
   try {
     const appId = parseInt(route.params.id as string)
+    if (editingRelationshipId.value) {
+      await applicationsApi.updateRelationship(appId, editingRelationshipId.value, relationshipForm.value as Partial<HostRelationship>)
+      toastStore.success(t('applications.updateRelationshipSuccess'))
+    } else {
     await applicationsApi.createRelationship(appId, relationshipForm.value as HostRelationship)
     toastStore.success(t('applications.addRelationshipSuccess'))
+    }
     closeAddRelationshipModal()
-    loadApplication()
+    await Promise.all([loadApplication(), loadRelationships()])
   } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('applications.addRelationshipFailed'))
+    const messageKey = editingRelationshipId.value ? 'applications.updateRelationshipFailed' : 'applications.addRelationshipFailed'
+    toastStore.error(error.response?.data?.message || t(messageKey))
   } finally {
     adding.value = false
   }
 }
 
+const openAddRelationshipModal = () => {
+  editingRelationshipId.value = null
+  relationshipForm.value = {}
+  showAddRelationshipModal.value = true
+}
+
+const editRelationship = (relationship: any) => {
+  relationshipForm.value = {
+    from_host_id: relationship.from_host_id,
+    to_host_id: relationship.to_host_id,
+    relationship_type: relationship.relationship_type,
+    description: relationship.description
+  }
+  editingRelationshipId.value = relationship.id
+  showAddRelationshipModal.value = true
+}
+
+const deleteRelationship = (relationship: any) => {
+  confirmMessage.value = t('applications.confirmRelationshipDelete')
+  confirmAction.value = async () => {
+    try {
+      const appId = parseInt(route.params.id as string)
+      await applicationsApi.deleteRelationship(appId, relationship.id)
+      toastStore.success(t('applications.deleteRelationshipSuccess'))
+      await loadRelationships()
+      await loadApplication()
+    } catch (error: any) {
+      toastStore.error(error.response?.data?.message || t('applications.deleteRelationshipFailed'))
+    }
+  }
+  showConfirmModal.value = true
+}
+
 onMounted(() => {
   loadApplication()
+  nextTick(() => renderNetwork())
+})
+
+watch(showAddHostModal, (opened) => {
+  if (opened) {
   loadAvailableHosts()
+  }
+})
+
+watch(
+  () => graphData.value,
+  () => {
+    renderNetwork()
+  },
+  { deep: true }
+)
+
+watch(selectedLayout, () => {
+  renderNetwork()
+})
+
+const buildNetworkData = () => {
+  const nodeColors: Record<string, { background: string; border: string }> = {
+    host: { background: '#2563EB', border: '#1D4ED8' },
+    server: { background: '#10B981', border: '#047857' },
+    network_device: { background: '#F97316', border: '#EA580C' },
+  }
+  
+  const nodes = graphData.value.nodes.map((node: any) => {
+    const color = nodeColors[node.group || 'host'] || nodeColors.host
+    return {
+      id: node.id,
+      label: node.label,
+      title: node.title,
+      shape: 'dot',
+      size: node.is_physical ? 24 : 18,
+      color: {
+        background: color.background,
+        border: color.border,
+        highlight: {
+          background: '#FACC15',
+          border: '#CA8A04'
+        }
+      },
+      font: {
+        color: '#ffffff',
+        strokeWidth: 1,
+        strokeColor: '#1F2937'
+      }
+    }
+  })
+  
+  const edges = graphData.value.edges.map((edge: any) => ({
+    id: edge.id,
+    from: edge.from,
+    to: edge.to,
+    label: edge.label,
+    title: edge.title,
+    color: { color: edge.color || '#6B7280' },
+    arrows: edge.arrows || 'to',
+    font: { align: 'top', color: '#374151' },
+    smooth: true
+  }))
+  
+  return { nodes, edges }
+}
+
+const getNetworkOptions = (layout: 'force' | 'hierarchical' | 'grid') => {
+  const baseOptions = {
+    interaction: {
+      hover: true,
+      zoomView: true,
+      dragView: true
+    },
+    physics: {
+      enabled: layout === 'force',
+      stabilization: { iterations: 200 }
+    },
+    layout: {
+      improvedLayout: true
+    },
+    edges: {
+      smooth: {
+        type: 'dynamic'
+      }
+    }
+  } as any
+  
+  if (layout === 'hierarchical') {
+    baseOptions.layout = {
+      hierarchical: {
+        direction: 'LR',
+        sortMethod: 'hubsize',
+        levelSeparation: 180,
+        nodeSpacing: 150
+      }
+    }
+    baseOptions.physics = { enabled: false }
+  }
+  
+  if (layout === 'grid') {
+    baseOptions.physics = { enabled: false }
+    baseOptions.layout = { randomSeed: 42 }
+  }
+  
+  return baseOptions
+}
+
+const renderNetwork = () => {
+  if (!networkContainer.value || graphData.value.nodes.length === 0) {
+    if (networkInstance.value) {
+      networkInstance.value.destroy()
+      networkInstance.value = null
+    }
+    return
+  }
+  
+  const data = buildNetworkData()
+  const options = getNetworkOptions(selectedLayout.value)
+  
+  try {
+    if (networkInstance.value) {
+      networkInstance.value.setData(data)
+      networkInstance.value.setOptions(options)
+    } else {
+      networkInstance.value = new Network(networkContainer.value, data, options)
+    }
+  } catch (error) {
+    console.error('Failed to render network', error)
+  }
+}
+
+onBeforeUnmount(() => {
+  if (networkInstance.value) {
+    networkInstance.value.destroy()
+    networkInstance.value = null
+  }
 })
 </script>
 
