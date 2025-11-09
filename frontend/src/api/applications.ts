@@ -15,22 +15,26 @@ export interface HostRelationship {
 }
 
 export interface ApplicationGraphNode {
-  id: number
+  id: string | number
   label: string
-  group?: string
-  title?: string
-  [key: string]: any
+  type?: string
+  x?: number
+  y?: number
+  color?: string
+  icon?: string
+  status?: string
+  bindingHostId?: number
+  data?: Record<string, any>
 }
 
 export interface ApplicationGraphEdge {
-  id: number
-  from: number
-  to: number
+  id?: string | number
+  source: string | number
+  target: string | number
   label?: string
-  title?: string
-  color?: string
-  arrows?: string
-  [key: string]: any
+  relationshipType?: string
+  description?: string
+  data?: Record<string, any>
 }
 
 export const applicationsApi = {
@@ -67,5 +71,13 @@ export const applicationsApi = {
 
   deleteRelationship: (id: number, relationshipId: number) =>
     apiClient.delete(`/applications/${id}/relationships/${relationshipId}`),
+
+  saveGraph: (id: number, payload: { nodes: ApplicationGraphNode[]; edges: ApplicationGraphEdge[]; resourceNodes: ApplicationGraphNode[]; metadata?: Record<string, any> }) =>
+    apiClient.put(`/applications/${id}/graph`, payload),
+
+  exportGraph: (id: number) =>
+    apiClient.get<Blob, Blob>(`/applications/${id}/graph/export`, {
+      responseType: 'blob'
+    }),
 }
 

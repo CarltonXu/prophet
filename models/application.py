@@ -19,6 +19,7 @@ class Application(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True, index=True)
+    graph_layout = db.Column(db.JSON, nullable=True)
     
     # Relationships
     hosts = db.relationship('Host', secondary='application_hosts', lazy='subquery', backref=db.backref('applications', lazy=True))
@@ -31,6 +32,7 @@ class Application(db.Model):
             'description': self.description,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'graph_layout': self.graph_layout,
         }
         
         if include_hosts:

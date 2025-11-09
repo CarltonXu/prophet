@@ -4,7 +4,9 @@
 
 """Applications API"""
 
-from flask import Blueprint, request, jsonify
+import json
+
+from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import jwt_required
 from utils.jwt import get_current_user_id
 from sqlalchemy import desc, or_
@@ -179,60 +181,124 @@ def remove_host_from_application(app_id, host_id):
     })
 
 
-@bp.route('/<int:app_id>/graph', methods=['GET'])
-@jwt_required()
-def get_application_graph(app_id):
-    """Get application relationship graph"""
-    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
-    
-    # Get all relationships between hosts in this application
+def _build_default_graph_payload(application: Application):
+    """Construct a default graph payload from current application data."""
     host_ids = [h.id for h in application.hosts]
-    
+
     relationships = HostRelationship.query.filter(
         HostRelationship.from_host_id.in_(host_ids),
         HostRelationship.to_host_id.in_(host_ids)
     ).all()
-    
-    node_payload = []
+
+    nodes = []
     for host in application.hosts:
-        node_payload.append({
+        nodes.append({
             'id': host.id,
             'label': host.hostname or host.ip or f'Host {host.id}',
-            'title': f"{host.ip or '-'}\n{host.hostname or ''}",
-            'group': host.device_type or 'host',
-            'is_physical': host.is_physical,
-            'ip': host.ip,
-            'hostname': host.hostname,
-            'os_type': host.os_type,
-            'tags': [tag.to_dict() for tag in host.tags]
+            'type': host.device_type or 'host',
+            'bindingHostId': host.id,
+            'data': {
+                'ip': host.ip,
+                'hostname': host.hostname,
+                'device_type': host.device_type,
+                'os_type': host.os_type,
+                'is_physical': host.is_physical,
+                'tags': [tag.to_dict() for tag in host.tags]
+            }
         })
-    
+
     edge_palette = {
         'depends_on': '#2563EB',
         'connects_to': '#0EA5E9',
         'runs_on': '#10B981',
         'member': '#6B7280'
     }
-    
-    edge_payload = []
+
+    edges = []
     for relation in relationships:
-        edge_payload.append({
+        edges.append({
             'id': relation.id,
-            'from': relation.from_host_id,
-            'to': relation.to_host_id,
+            'source': relation.from_host_id,
+            'target': relation.to_host_id,
+            'relationshipType': relation.relationship_type,
             'label': relation.relationship_type,
-            'title': relation.description or relation.relationship_type,
-            'color': edge_palette.get(relation.relationship_type, '#6B7280'),
-            'arrows': 'to'
+            'description': relation.description or '',
+            'style': {
+                'color': edge_palette.get(relation.relationship_type, '#6B7280')
+            }
         })
-    
+
+    return {
+        'nodes': nodes,
+        'edges': edges,
+        'resourceNodes': [],
+        'metadata': {
+            'generated_at': datetime.utcnow().isoformat()
+        }
+    }
+
+
+@bp.route('/<int:app_id>/graph', methods=['GET'])
+@jwt_required()
+def get_application_graph(app_id):
+    """Get application relationship graph"""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    payload = application.graph_layout or _build_default_graph_payload(application)
+
     return jsonify({
         'code': 200,
-        'data': {
-            'nodes': node_payload,
-            'edges': edge_payload
-        }
+        'data': payload
     })
+
+
+@bp.route('/<int:app_id>/graph', methods=['PUT'])
+@jwt_required()
+def save_application_graph(app_id):
+    """Persist custom application graph layout."""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    data = request.get_json(silent=True) or {}
+
+    nodes = data.get('nodes')
+    edges = data.get('edges')
+    resource_nodes = data.get('resourceNodes', [])
+    metadata = data.get('metadata', {})
+
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        return jsonify({
+            'code': 400,
+            'message': 'nodes and edges must be provided as arrays'
+        }), 400
+
+    metadata['saved_at'] = datetime.utcnow().isoformat()
+    metadata['saved_by'] = get_current_user_id()
+
+    application.graph_layout = {
+        'nodes': nodes,
+        'edges': edges,
+        'resourceNodes': resource_nodes,
+        'metadata': metadata
+    }
+    db.session.commit()
+
+    return jsonify({
+        'code': 200,
+        'message': 'Graph layout saved'
+    })
+
+
+@bp.route('/<int:app_id>/graph/export', methods=['GET'])
+@jwt_required()
+def export_application_graph(app_id):
+    """Export the application graph as downloadable JSON."""
+    application = Application.query.filter_by(id=app_id, deleted_at=None).first_or_404()
+    payload = application.graph_layout or _build_default_graph_payload(application)
+
+    json_body = json.dumps(payload, ensure_ascii=False, indent=2)
+
+    response = make_response(json_body)
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=application-{app_id}-graph.json'
+    return response
 
 
 @bp.route('/<int:app_id>/relationships', methods=['GET'])
