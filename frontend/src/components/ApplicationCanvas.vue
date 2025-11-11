@@ -219,18 +219,24 @@ const renderGraph = () => {
       return true
     })
     .map((edge) => {
-      // 确定边的类型，默认为 polyline
-      const edgeType = edge.edgeType || EdgeType.POLYLINE
-      // 确定边的样式
-      const strokeDasharray = edge.strokeDasharray || (edge.data?.dashed ? '5 5' : '')
-      const strokeWidth = typeof edge.strokeWidth === 'number' 
-        ? edge.strokeWidth 
-        : edge.strokeWidth === 'thin' 
-          ? 1 
-          : edge.strokeWidth === 'thick' 
-            ? 3 
-            : 2
-      const stroke = edge.stroke || edge.data?.stroke || '#94a3b8'
+      // 确定边的类型，使用 !== undefined 检查保留空字符串
+      const edgeType = edge.edgeType !== undefined ? edge.edgeType : EdgeType.POLYLINE
+      // 确定边的样式，使用 !== undefined 检查保留空字符串
+      const strokeDasharray = edge.strokeDasharray !== undefined 
+        ? edge.strokeDasharray 
+        : (edge.data?.dashed ? '5 5' : '')
+      const strokeWidth = edge.strokeWidth !== undefined
+        ? (typeof edge.strokeWidth === 'number' 
+          ? edge.strokeWidth 
+          : edge.strokeWidth === 'thin' 
+            ? 1 
+            : edge.strokeWidth === 'thick' 
+              ? 3 
+              : 2)
+        : 2
+      const stroke = edge.stroke !== undefined 
+        ? edge.stroke 
+        : (edge.data?.stroke !== undefined ? edge.data.stroke : '#94a3b8')
       
       return {
         id: edge.id ? String(edge.id) : undefined,
@@ -262,19 +268,70 @@ const renderGraph = () => {
   lf.render(data)
   
   // 确保样式正确应用 - 在渲染后更新所有边的样式
+  // 添加延迟，确保 LogicFlow 完全渲染完成后再更新样式
   nextTick(() => {
-    edgesData.forEach((edgeData) => {
-      if (edgeData.id && edgeData.style) {
-        try {
-          const edgeModel = lf?.getEdgeModelById(edgeData.id)
-          if (edgeModel) {
-            edgeModel.updateStyle(edgeData.style)
+    setTimeout(() => {
+      props.edges.forEach((edge) => {
+        if (edge.id) {
+          try {
+            const edgeModel = lf?.getEdgeModelById(String(edge.id))
+            if (edgeModel) {
+              // 明确检查每个样式属性是否存在，同时更新 style 和 properties，保持数据一致
+              const currentStyle = edgeModel.style || {}
+              const currentProperties = edgeModel.properties || {}
+              
+              // 构建要更新的样式对象
+              const styleToUpdate: Record<string, any> = {}
+              const propertiesToUpdate: Record<string, any> = {}
+              
+              // 检查并更新 edgeType
+              if (edge.edgeType !== undefined && (currentProperties.edgeType !== edge.edgeType || edgeModel.type !== edge.edgeType)) {
+                propertiesToUpdate.edgeType = edge.edgeType
+                if (edgeModel.setProperties) {
+                  edgeModel.setProperties({ edgeType: edge.edgeType })
+                }
+              }
+              
+              // 检查并更新 strokeDasharray
+              if (edge.strokeDasharray !== undefined && currentStyle.strokeDasharray !== edge.strokeDasharray) {
+                styleToUpdate.strokeDasharray = edge.strokeDasharray
+                propertiesToUpdate.strokeDasharray = edge.strokeDasharray
+              }
+              
+              // 检查并更新 strokeWidth
+              if (edge.strokeWidth !== undefined && currentStyle.strokeWidth !== edge.strokeWidth) {
+                styleToUpdate.strokeWidth = edge.strokeWidth
+                propertiesToUpdate.strokeWidth = edge.strokeWidth
+              }
+              
+              // 检查并更新 stroke
+              if (edge.stroke !== undefined && currentStyle.stroke !== edge.stroke) {
+                styleToUpdate.stroke = edge.stroke
+                propertiesToUpdate.stroke = edge.stroke
+              }
+              
+              // 如果有样式需要更新
+              if (Object.keys(styleToUpdate).length > 0) {
+                if (typeof edgeModel.updateStyle === 'function') {
+                  edgeModel.updateStyle(styleToUpdate)
+                } else {
+                  // 如果 updateStyle 不存在，直接设置 style 属性
+                  Object.assign(edgeModel.style || {}, styleToUpdate)
+                  edgeModel.updateAttributes()
+                }
+              }
+              
+              // 如果有属性需要更新
+              if (Object.keys(propertiesToUpdate).length > 0 && edgeModel.setProperties) {
+                edgeModel.setProperties(propertiesToUpdate)
+              }
+            }
+          } catch (error) {
+            console.warn(`Failed to update style for edge ${edge.id}:`, error)
           }
-        } catch (error) {
-          // 忽略错误，边可能还未完全创建
         }
-      }
-    })
+      })
+    }, 100) // 100ms 延迟，确保 LogicFlow 完全渲染完成
   })
 }
 
@@ -702,10 +759,11 @@ const mapLfEdgeToCanvasEdge = (edge: any): CanvasEdgeData => {
     relationshipType: properties.relationshipType,
     label: edge.text?.value || properties.relationshipType || '',
     description: properties.description,
-    edgeType: properties.edgeType || edge.type || EdgeType.POLYLINE,
-    strokeDasharray: style.strokeDasharray || properties.strokeDasharray || '',
-    strokeWidth: style.strokeWidth || properties.strokeWidth || 2,
-    stroke: style.stroke || properties.stroke || '#94a3b8',
+    // 使用 !== undefined 检查保留空字符串和 falsy 值
+    edgeType: properties.edgeType !== undefined ? properties.edgeType : (edge.type !== undefined ? edge.type : EdgeType.POLYLINE),
+    strokeDasharray: style.strokeDasharray !== undefined ? style.strokeDasharray : (properties.strokeDasharray !== undefined ? properties.strokeDasharray : ''),
+    strokeWidth: style.strokeWidth !== undefined ? style.strokeWidth : (properties.strokeWidth !== undefined ? properties.strokeWidth : 2),
+    stroke: style.stroke !== undefined ? style.stroke : (properties.stroke !== undefined ? properties.stroke : '#94a3b8'),
     data: properties.data || {},
   }
 }

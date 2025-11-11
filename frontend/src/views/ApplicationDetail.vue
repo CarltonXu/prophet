@@ -1841,11 +1841,12 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
           target: String(edge?.target ?? edge?.to ?? ''),
       relationshipType,
       label: relationshipType ? getRelationshipLabel(relationshipType) : edge?.label,
-      description: edge?.description || relation?.description || '',
-          edgeType: edge?.edgeType || 'polyline',
-          strokeDasharray: edge?.strokeDasharray || '',
-          strokeWidth: edge?.strokeWidth || 2,
-          stroke: edge?.stroke || '#94a3b8',
+      description: edge?.description !== undefined ? edge.description : (relation?.description || ''),
+      // 直接使用 graph 中的样式属性（从服务器保存的），保留所有值包括空字符串
+      edgeType: edge?.edgeType !== undefined ? edge.edgeType : 'polyline',
+      strokeDasharray: edge?.strokeDasharray !== undefined ? edge.strokeDasharray : '',
+      strokeWidth: edge?.strokeWidth !== undefined ? edge.strokeWidth : 2,
+      stroke: edge?.stroke !== undefined ? edge.stroke : '#94a3b8',
       data: {
         ...(edge?.data || {}),
         relationship: relation
@@ -1875,11 +1876,11 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
         // 合并：优先使用 graph 中的样式（从服务器保存的），但保留关系数据
         edgesMap.set(String(edge.id), {
           ...existingEdge,
-          // 优先使用 graph 中的样式属性（从服务器加载的）
-          edgeType: edge.edgeType || existingEdge.edgeType || 'polyline',
-          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray || ''),
-          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth || 2),
-          stroke: edge.stroke || existingEdge.stroke || '#94a3b8',
+          // 优先使用 graph 中的样式属性（从服务器加载的），使用 !== undefined 检查保留空字符串
+          edgeType: edge.edgeType !== undefined ? edge.edgeType : (existingEdge.edgeType !== undefined ? existingEdge.edgeType : 'polyline'),
+          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray !== undefined ? existingEdge.strokeDasharray : ''),
+          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth !== undefined ? existingEdge.strokeWidth : 2),
+          stroke: edge.stroke !== undefined ? edge.stroke : (existingEdge.stroke !== undefined ? existingEdge.stroke : '#94a3b8'),
           // 保留其他属性
           id: edge.id || existingEdge.id,
           source: edge.source || existingEdge.source,
@@ -1903,11 +1904,11 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
         // 合并：优先使用 graph 中的样式（从服务器保存的），但保留关系数据
         edgesMap.set(key, {
           ...existingEdge,
-          // 优先使用 graph 中的样式属性（从服务器加载的）
-          edgeType: edge.edgeType || existingEdge.edgeType || 'polyline',
-          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray || ''),
-          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth || 2),
-          stroke: edge.stroke || existingEdge.stroke || '#94a3b8',
+          // 优先使用 graph 中的样式属性（从服务器加载的），使用 !== undefined 检查保留空字符串
+          edgeType: edge.edgeType !== undefined ? edge.edgeType : (existingEdge.edgeType !== undefined ? existingEdge.edgeType : 'polyline'),
+          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray !== undefined ? existingEdge.strokeDasharray : ''),
+          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth !== undefined ? existingEdge.strokeWidth : 2),
+          stroke: edge.stroke !== undefined ? edge.stroke : (existingEdge.stroke !== undefined ? existingEdge.stroke : '#94a3b8'),
           // 保留其他属性
           id: edge.id || existingEdge.id,
           source: edge.source || existingEdge.source,
@@ -1982,12 +1983,13 @@ const handleCanvasEdgeClick = (edge: CanvasEdgeData) => {
   // 从最新的边数据中加载样式，确保每条边独立
   edgeForm.relationship_type = latestEdge.relationshipType || 'member'
   edgeForm.description = latestEdge.description || ''
-  edgeForm.edgeType = latestEdge.edgeType || 'polyline'
-  edgeForm.strokeDasharray = latestEdge.strokeDasharray || ''
+  // 使用 !== undefined 检查保留空字符串和 falsy 值
+  edgeForm.edgeType = latestEdge.edgeType !== undefined ? latestEdge.edgeType : 'polyline'
+  edgeForm.strokeDasharray = latestEdge.strokeDasharray !== undefined ? latestEdge.strokeDasharray : ''
   edgeForm.strokeWidth = typeof latestEdge.strokeWidth === 'number' 
     ? latestEdge.strokeWidth 
     : (latestEdge.strokeWidth === 'thin' ? 1 : latestEdge.strokeWidth === 'thick' ? 3 : 2)
-  edgeForm.stroke = latestEdge.stroke || '#94a3b8'
+  edgeForm.stroke = latestEdge.stroke !== undefined ? latestEdge.stroke : '#94a3b8'
 }
 
 const handleCanvasBlankClick = () => {
@@ -3566,11 +3568,11 @@ const serializeGraph = () => {
           if (lfEdge) {
             const properties = lfEdge.properties || {}
             const style = lfEdge.style || {}
-            // 从 LogicFlow 同步样式到 canvasEdges
-            edge.edgeType = properties.edgeType || lfEdge.type || edge.edgeType || 'polyline'
-            edge.strokeDasharray = style.strokeDasharray || properties.strokeDasharray || edge.strokeDasharray || ''
-            edge.strokeWidth = style.strokeWidth || properties.strokeWidth || edge.strokeWidth || 2
-            edge.stroke = style.stroke || properties.stroke || edge.stroke || '#94a3b8'
+            // 从 LogicFlow 同步样式到 canvasEdges，使用 !== undefined 检查保留空字符串
+            edge.edgeType = properties.edgeType !== undefined ? properties.edgeType : (lfEdge.type !== undefined ? lfEdge.type : (edge.edgeType !== undefined ? edge.edgeType : 'polyline'))
+            edge.strokeDasharray = style.strokeDasharray !== undefined ? style.strokeDasharray : (properties.strokeDasharray !== undefined ? properties.strokeDasharray : (edge.strokeDasharray !== undefined ? edge.strokeDasharray : ''))
+            edge.strokeWidth = style.strokeWidth !== undefined ? style.strokeWidth : (properties.strokeWidth !== undefined ? properties.strokeWidth : (edge.strokeWidth !== undefined ? edge.strokeWidth : 2))
+            edge.stroke = style.stroke !== undefined ? style.stroke : (properties.stroke !== undefined ? properties.stroke : (edge.stroke !== undefined ? edge.stroke : '#94a3b8'))
           }
         } catch (error) {
           // 如果边不存在或获取失败，使用原有样式
