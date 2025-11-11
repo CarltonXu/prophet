@@ -215,20 +215,6 @@
             <h2 class="text-lg font-medium text-gray-900">{{ $t('applications.relationshipCanvas') }}</h2>
             <p class="text-sm text-gray-500">{{ $t('applications.relationshipCanvasSubtitle') }}</p>
           </div>
-          <div class="flex items-center gap-2 text-xs text-gray-400">
-            <span class="inline-flex items-center gap-1">
-              <span class="inline-block h-3 w-3 rounded-full bg-blue-500"></span>
-              <span>{{ $t('applications.legendPhysical') }}</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="inline-block h-3 w-3 rounded-full bg-emerald-500"></span>
-              <span>{{ $t('applications.legendVirtual') }}</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="inline-block h-3 w-3 rounded-full bg-orange-500"></span>
-              <span>{{ $t('applications.legendNetwork') }}</span>
-            </span>
-          </div>
         </div>
         <div :class="[
             'flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-3 text-xs text-gray-500',
@@ -479,14 +465,17 @@
           </div>
         </div>
         <div :class="['flex', isCanvasFullscreen ? 'flex-1 min-h-0 h-full' : 'h-[560px]']">
-          <aside class="w-72 border-r border-gray-200 bg-gray-50 flex flex-col">
+          <aside 
+            :style="{ width: isCanvasFullscreen ? `${leftSidebarWidth}px` : '288px' }"
+            class="border-r border-gray-200 bg-gray-50 flex flex-col transition-all duration-200 flex-shrink-0"
+          >
             <div class="flex-1 overflow-y-auto p-4 space-y-6">
               <div>
                 <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {{ $t('applications.resourcePaletteTitle') }}
                 </h4>
                 <p class="mt-1 text-xs text-gray-500">{{ $t('applications.resourcePaletteHint') }}</p>
-                <div class="mt-3 grid grid-cols-2 gap-2">
+                <div :class="['mt-3 grid gap-2', (isCanvasFullscreen ? leftSidebarWidth : 288) < 300 ? 'grid-cols-1' : 'grid-cols-2']">
                   <button
                     v-for="item in resourceLibrary"
                     :key="item.key"
@@ -567,6 +556,68 @@
               </div>
             </div>
           </aside>
+          <!-- 左侧拖动条 -->
+          <div
+            v-if="isCanvasFullscreen"
+            @mousedown="startResizeLeft"
+            :class="[
+              'group relative flex items-center justify-center cursor-col-resize flex-shrink-0 transition-all duration-200',
+              'w-1 hover:w-2',
+              isResizingLeft ? 'w-2' : ''
+            ]"
+            title="拖动调整左侧边栏宽度"
+          >
+            <!-- 拖动区域背景 -->
+            <div
+              :class="[
+                'absolute inset-0 transition-all duration-200',
+                'bg-gray-100/50 hover:bg-blue-50/80',
+                isResizingLeft ? 'bg-blue-100/90' : ''
+              ]"
+            />
+            <!-- 拖动指示器（三个点） -->
+            <div
+              :class="[
+                'relative z-10 flex flex-col gap-1.5 items-center justify-center transition-all duration-200',
+                'opacity-40 group-hover:opacity-100',
+                isResizingLeft ? 'opacity-100' : ''
+              ]"
+            >
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingLeft 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingLeft 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingLeft 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+            </div>
+            <!-- 拖动区域边框线 -->
+            <div
+              :class="[
+                'absolute inset-y-0 left-0 w-px transition-all duration-200',
+                isResizingLeft 
+                  ? 'bg-blue-500 shadow-sm' 
+                  : 'bg-gray-300 group-hover:bg-blue-400'
+              ]"
+            />
+          </div>
           <div
             :class="['flex-1 relative', isCanvasFullscreen ? 'min-h-0' : '']"
             ref="canvasContainerRef"
@@ -593,7 +644,72 @@
               </div>
             </div>
           </div>
-          <aside class="w-72 border-l border-gray-200 bg-white">
+          <!-- 右侧拖动条 -->
+          <div
+            v-if="isCanvasFullscreen"
+            @mousedown="startResizeRight"
+            :class="[
+              'group relative flex items-center justify-center cursor-col-resize flex-shrink-0 transition-all duration-200',
+              'w-1 hover:w-2',
+              isResizingRight ? 'w-2' : ''
+            ]"
+            title="拖动调整右侧边栏宽度"
+          >
+            <!-- 拖动区域背景 -->
+            <div
+              :class="[
+                'absolute inset-0 transition-all duration-200',
+                'bg-gray-100/50 hover:bg-blue-50/80',
+                isResizingRight ? 'bg-blue-100/90' : ''
+              ]"
+            />
+            <!-- 拖动指示器（三个点） -->
+            <div
+              :class="[
+                'relative z-10 flex flex-col gap-1.5 items-center justify-center transition-all duration-200',
+                'opacity-40 group-hover:opacity-100',
+                isResizingRight ? 'opacity-100' : ''
+              ]"
+            >
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingRight 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingRight 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+              <div
+                :class="[
+                  'w-1 h-1 rounded-full transition-all duration-200',
+                  isResizingRight 
+                    ? 'bg-blue-600 shadow-sm' 
+                    : 'bg-gray-500 group-hover:bg-blue-500 group-hover:shadow-sm'
+                ]"
+              />
+            </div>
+            <!-- 拖动区域边框线 -->
+            <div
+              :class="[
+                'absolute inset-y-0 right-0 w-px transition-all duration-200',
+                isResizingRight 
+                  ? 'bg-blue-500 shadow-sm' 
+                  : 'bg-gray-300 group-hover:bg-blue-400'
+              ]"
+            />
+          </div>
+          <aside 
+            :style="{ width: isCanvasFullscreen ? `${rightSidebarWidth}px` : '288px' }"
+            class="border-l border-gray-200 bg-white flex-shrink-0 transition-all duration-200"
+          >
             <div class="h-full overflow-y-auto p-4 space-y-4">
               <div>
                 <h3 class="text-sm font-semibold text-gray-700">{{ $t('applications.canvasInspector') }}</h3>
@@ -1145,6 +1261,13 @@ const isCanvasFullscreen = ref(false)
 const draggingResourceKey = ref<string | null>(null)
 const isSavingGraph = ref(false)
 const isExportingGraph = ref(false)
+// 侧边栏宽度控制（仅在全屏模式下可调整）
+const leftSidebarWidth = ref(288) // 默认 w-72 = 288px
+const rightSidebarWidth = ref(288) // 默认 w-72 = 288px
+const minSidebarWidth = 200
+const maxSidebarWidth = 600
+const isResizingLeft = ref(false)
+const isResizingRight = ref(false)
 
 type HostTag = {
   id?: number
@@ -3793,6 +3916,56 @@ const exitCanvasFullscreen = () => {
   if (isCanvasFullscreen.value) {
     isCanvasFullscreen.value = false
   }
+}
+
+// 左侧边栏拖动逻辑
+const startResizeLeft = (e: MouseEvent) => {
+  if (!isCanvasFullscreen.value) return
+  e.preventDefault()
+  isResizingLeft.value = true
+  const startX = e.clientX
+  const startWidth = leftSidebarWidth.value
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizingLeft.value) return
+    const diff = e.clientX - startX
+    const newWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, startWidth + diff))
+    leftSidebarWidth.value = newWidth
+  }
+
+  const handleMouseUp = () => {
+    isResizingLeft.value = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
+
+// 右侧边栏拖动逻辑
+const startResizeRight = (e: MouseEvent) => {
+  if (!isCanvasFullscreen.value) return
+  e.preventDefault()
+  isResizingRight.value = true
+  const startX = e.clientX
+  const startWidth = rightSidebarWidth.value
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizingRight.value) return
+    const diff = startX - e.clientX // 注意：右侧是反向的
+    const newWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, startWidth + diff))
+    rightSidebarWidth.value = newWidth
+  }
+
+  const handleMouseUp = () => {
+    isResizingRight.value = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
 }
 
 const loadRelationships = async () => {
