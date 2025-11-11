@@ -13,6 +13,7 @@ import {
   CanvasEdgeData,
   CanvasNodeData,
   CanvasNodeType,
+  EdgeType,
   DEFAULT_NODE_HEIGHT,
   DEFAULT_NODE_WIDTH,
 } from './ApplicationCanvas/types'
@@ -66,6 +67,75 @@ const TYPE_TINT_MAP: Record<CanvasNodeType, string> = {
   [CanvasNodeType.CUSTOM]: '#f8fafc',
 }
 
+const TYPE_ICON_PATHS: Record<CanvasNodeType, string[]> = {
+  [CanvasNodeType.HOST]: [
+    'M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25',
+  ],
+  [CanvasNodeType.NETWORK]: [
+    'M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418',
+  ],
+  [CanvasNodeType.STORAGE]: [
+    'M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z',
+  ],
+  [CanvasNodeType.OBJECT_STORAGE]: [
+    'M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z',
+  ],
+  [CanvasNodeType.DATABASE]: [
+    'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
+  ],
+  [CanvasNodeType.SERVICE]: [
+    'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z',
+    'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+  ],
+  [CanvasNodeType.CUSTOM]: [
+    'M12 6v12',
+    'M6 12h12',
+  ],
+}
+
+const normalizeNodeType = (value: unknown): CanvasNodeType => {
+  if (!value) return CanvasNodeType.CUSTOM
+  
+  // 如果已经是 CanvasNodeType 枚举值，直接返回
+  if (typeof value === 'string' && Object.values(CanvasNodeType).includes(value as CanvasNodeType)) {
+    return value as CanvasNodeType
+  }
+  
+  if (typeof value === 'string') {
+    const normalized = value.trim()
+    const lower = normalized.toLowerCase()
+    switch (lower) {
+      case 'host':
+      case 'hosts':
+        return CanvasNodeType.HOST
+      case 'network':
+      case 'networks':
+        return CanvasNodeType.NETWORK
+      case 'storage':
+      case 'storages':
+        return CanvasNodeType.STORAGE
+      case 'objectstorage':
+      case 'object_storage':
+      case 'object-storage':
+      case 'objectstoragebucket':
+      case 'object':
+      case 'bucket':
+        return CanvasNodeType.OBJECT_STORAGE
+      case 'database':
+      case 'databases':
+        return CanvasNodeType.DATABASE
+      case 'service':
+      case 'services':
+        return CanvasNodeType.SERVICE
+      case 'custom':
+        return CanvasNodeType.CUSTOM
+      default:
+        return CanvasNodeType.CUSTOM
+    }
+  }
+  return CanvasNodeType.CUSTOM
+}
+
 const initCanvas = () => {
   if (!canvasWrapper.value) return
 
@@ -90,6 +160,9 @@ const initCanvas = () => {
     nodeDraggable: !props.readonly,
     edgeDraggable: !props.readonly,
     adjustNodePosition: true,
+    // Enable anchor dragging and auto-snap
+    adjustEdgeStartAndEnd: true,
+    hoverOutline: false,
   })
   renderGraph()
   attachEventHandlers()
@@ -98,37 +171,111 @@ const initCanvas = () => {
 
 const renderGraph = () => {
   if (!lf) return
-  const data: GraphConfigData = {
-    nodes: props.nodes.map((node) => ({
-      id: String(node.id),
+  
+  // 创建节点 ID 集合，用于验证边的 source/target 是否存在
+  const nodeIdSet = new Set<string>()
+  const nodesData = props.nodes.map((node) => {
+    // 优先使用保存的图标类型，如果没有则默认使用 HOST 类型
+    const savedIcon = node.icon || node.data?.iconType
+    const iconType = savedIcon 
+      ? (typeof savedIcon === 'string' ? normalizeNodeType(savedIcon) : (savedIcon as CanvasNodeType))
+      : CanvasNodeType.HOST
+    const rawType = normalizeNodeType(node.type || CanvasNodeType.HOST)
+    // 优先使用保存的自定义颜色
+    const customColor = node.data?.customColor || node.data?.color || node.color
+    const nodeId = String(node.id)
+    nodeIdSet.add(nodeId)
+    return {
+      id: nodeId,
       type: 'device-node',
       x: node.x,
       y: node.y,
       text: node.label,
       properties: {
         label: node.label,
-        icon: node.icon,
+        icon: iconType,
         color: node.color,
+        customColor,
+        iconType,
         bindingHostId: node.bindingHostId,
         status: node.status,
         data: node.data || {},
-        rawType: node.type,
+        rawType,
       },
-    })),
-    edges: props.edges.map((edge) => ({
-      id: edge.id ? String(edge.id) : undefined,
-      type: 'polyline',
-      sourceNodeId: String(edge.source),
-      targetNodeId: String(edge.target),
-      text: edge.label || edge.relationshipType,
-      properties: {
-        relationshipType: edge.relationshipType,
-        description: edge.description,
-        data: edge.data || {},
-      },
-    })),
+    }
+  })
+  
+  // 过滤边，只保留 source 和 target 都存在的边
+  const edgesData = props.edges
+    .filter((edge) => {
+      const sourceId = String(edge.source)
+      const targetId = String(edge.target)
+      const sourceExists = nodeIdSet.has(sourceId)
+      const targetExists = nodeIdSet.has(targetId)
+      if (!sourceExists || !targetExists) {
+        console.warn(`Edge ${edge.id} references non-existent nodes: source=${sourceId} (exists: ${sourceExists}), target=${targetId} (exists: ${targetExists})`)
+        return false
+      }
+      return true
+    })
+    .map((edge) => {
+      // 确定边的类型，默认为 polyline
+      const edgeType = edge.edgeType || EdgeType.POLYLINE
+      // 确定边的样式
+      const strokeDasharray = edge.strokeDasharray || (edge.data?.dashed ? '5 5' : '')
+      const strokeWidth = typeof edge.strokeWidth === 'number' 
+        ? edge.strokeWidth 
+        : edge.strokeWidth === 'thin' 
+          ? 1 
+          : edge.strokeWidth === 'thick' 
+            ? 3 
+            : 2
+      const stroke = edge.stroke || edge.data?.stroke || '#94a3b8'
+      
+      return {
+        id: edge.id ? String(edge.id) : undefined,
+        type: edgeType,
+        sourceNodeId: String(edge.source),
+        targetNodeId: String(edge.target),
+        text: edge.label || edge.relationshipType,
+        properties: {
+          relationshipType: edge.relationshipType,
+          description: edge.description,
+          edgeType,
+          strokeDasharray,
+          strokeWidth,
+          stroke,
+          data: edge.data || {},
+        },
+        style: {
+          strokeDasharray,
+          strokeWidth,
+          stroke,
+        },
+      }
+    })
+  
+  const data: GraphConfigData = {
+    nodes: nodesData,
+    edges: edgesData,
   }
   lf.render(data)
+  
+  // 确保样式正确应用 - 在渲染后更新所有边的样式
+  nextTick(() => {
+    edgesData.forEach((edgeData) => {
+      if (edgeData.id && edgeData.style) {
+        try {
+          const edgeModel = lf?.getEdgeModelById(edgeData.id)
+          if (edgeModel) {
+            edgeModel.updateStyle(edgeData.style)
+          }
+        } catch (error) {
+          // 忽略错误，边可能还未完全创建
+        }
+      }
+    })
+  })
 }
 
 const registerCustomNodes = (instance: LogicFlow) => {
@@ -136,253 +283,68 @@ const registerCustomNodes = (instance: LogicFlow) => {
     return
   }
 
-  const createIconNodes = (type: CanvasNodeType, cx: number, cy: number, stroke: string) => {
+  const createIconNodes = (iconType: CanvasNodeType, cx: number, cy: number, stroke: string, size: number) => {
     const nodes: any[] = []
-    const strokeWidth = 1.5
-    const cap = 'round'
-    const join = 'round'
-
-    switch (type) {
-      case CanvasNodeType.HOST:
+    // 确保 iconType 是有效的 CanvasNodeType
+    const validIconType = iconType && Object.values(CanvasNodeType).includes(iconType) 
+      ? iconType 
+      : CanvasNodeType.CUSTOM
+    const paths = TYPE_ICON_PATHS[validIconType] || TYPE_ICON_PATHS[CanvasNodeType.CUSTOM]
+    if (paths && paths.length > 0) {
         nodes.push(
-          h('rect', {
-            x: cx - 9,
-            y: cy - 6,
-            width: 18,
-            height: 12,
-            rx: 2,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-            'stroke-linejoin': join,
+        h(
+          'svg',
+          {
+            x: cx - size / 2,
+            y: cy - size / 2,
+            width: size,
+            height: size,
+            viewBox: '0 0 24 24',
             fill: 'none',
-          }),
-          h('line', {
-            x1: cx - 6,
-            y1: cy + 6,
-            x2: cx + 6,
-            y2: cy + 6,
             stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('line', {
-            x1: cx - 3,
-            y1: cy + 6,
-            x2: cx - 3,
-            y2: cy + 9,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('line', {
-            x1: cx + 3,
-            y1: cy + 6,
-            x2: cx + 3,
-            y2: cy + 9,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          })
-        )
-        break
-      case CanvasNodeType.NETWORK:
-        nodes.push(
-          h('circle', {
-            cx,
-            cy,
-            r: 5,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          }),
-          h('circle', { cx: cx - 9, cy: cy - 9, r: 2, fill: stroke }),
-          h('line', {
-            x1: cx - 9,
-            y1: cy - 9,
-            x2: cx - 3,
-            y2: cy - 1,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('circle', { cx: cx + 9, cy: cy - 4, r: 2, fill: stroke }),
-          h('line', {
-            x1: cx + 9,
-            y1: cy - 4,
-            x2: cx + 2,
-            y2: cy - 1,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('circle', { cx: cx - 4, cy: cy + 9, r: 2, fill: stroke }),
-          h('line', {
-            x1: cx - 4,
-            y1: cy + 9,
-            x2: cx - 1,
-            y2: cy + 2,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          })
-        )
-        break
-      case CanvasNodeType.STORAGE:
-        nodes.push(
-          h('ellipse', {
-            cx,
-            cy: cy - 3,
-            rx: 9,
-            ry: 5,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          }),
+            'stroke-width': 1.5,
+          },
+          paths.map((d) =>
           h('path', {
-            d: `M${cx - 9} ${cy - 3}v8c0 3.2 18 3.2 18 0v-8`,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-            'stroke-linejoin': join,
-            fill: 'none',
-          }),
-          h('ellipse', {
-            cx,
-            cy: cy + 5,
-            rx: 9,
-            ry: 5,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          })
+              d,
+              'stroke-linecap': 'round',
+              'stroke-linejoin': 'round',
+            })
+          )
         )
-        break
-      case CanvasNodeType.OBJECT_STORAGE:
-        nodes.push(
-          h('path', {
-            d: `M${cx - 8} ${cy + 2}c0-4 3.5-7 7.5-7 3 0 5.6 1.7 6.8 4.1 1.9 0.2 3.7 1.5 4.2 3.6 0.6 2.4-0.9 4.8-3.3 5.4a4.5 4.5 0 0 1-1.1 0.1h-14.6c-2.1 0-3.9-1.6-4.2-3.7-.3-2 1.1-3.9 3.1-4.5Z`,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-            'stroke-linejoin': join,
-            fill: 'none',
-          }),
-          h('line', {
-            x1: cx - 2,
-            y1: cy + 6,
-            x2: cx + 4,
-            y2: cy,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('line', {
-            x1: cx + 4,
-            y1: cy + 6,
-            x2: cx + 8,
-            y2: cy + 2,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          })
-        )
-        break
-      case CanvasNodeType.DATABASE:
-        nodes.push(
-          h('ellipse', {
-            cx,
-            cy: cy - 4,
-            rx: 9,
-            ry: 5,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          }),
-          h('path', {
-            d: `M${cx - 9} ${cy - 4}v10c0 3.2 18 3.2 18 0v-10`,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-            'stroke-linejoin': join,
-            fill: 'none',
-          }),
-          h('ellipse', {
-            cx,
-            cy: cy + 6,
-            rx: 9,
-            ry: 5,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          }),
-          h('line', {
-            x1: cx - 9,
-            y1: cy,
-            x2: cx + 9,
-            y2: cy,
-            stroke,
-            'stroke-width': strokeWidth,
-          })
-        )
-        break
-      case CanvasNodeType.SERVICE:
-        nodes.push(
-          h('polygon', {
-            points: `${cx},${cy - 9} ${cx + 7.8},${cy - 4.5} ${cx + 7.8},${cy + 4.5} ${cx},${cy + 9} ${cx - 7.8},${cy + 4.5} ${cx - 7.8},${cy - 4.5}`,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linejoin': join,
-            fill: 'none',
-          }),
-          h('line', {
-            x1: cx,
-            y1: cy - 6,
-            x2: cx,
-            y2: cy + 6,
-            stroke,
-            'stroke-width': strokeWidth,
-          }),
-          h('line', {
-            x1: cx - 4,
-            y1: cy,
-            x2: cx + 4,
-            y2: cy,
-            stroke,
-            'stroke-width': strokeWidth,
-          })
-        )
-        break
-      default:
-        nodes.push(
-          h('circle', {
-            cx,
-            cy,
-            r: 6,
-            stroke,
-            'stroke-width': strokeWidth,
-            fill: 'none',
-          }),
-          h('line', {
-            x1: cx,
-            y1: cy - 4,
-            x2: cx,
-            y2: cy + 4,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          }),
-          h('line', {
-            x1: cx - 4,
-            y1: cy,
-            x2: cx + 4,
-            y2: cy,
-            stroke,
-            'stroke-width': strokeWidth,
-            'stroke-linecap': cap,
-          })
-        )
+      )
+      return nodes
     }
+
+    const fallbackRadius = size / 3
+        nodes.push(
+          h('circle', {
+            cx,
+            cy,
+        r: fallbackRadius,
+            stroke,
+        'stroke-width': 1.5,
+            fill: 'none',
+          }),
+          h('line', {
+            x1: cx,
+        y1: cy - fallbackRadius * 0.6,
+            x2: cx,
+        y2: cy + fallbackRadius * 0.6,
+            stroke,
+        'stroke-width': 1.5,
+        'stroke-linecap': 'round',
+          }),
+          h('line', {
+        x1: cx - fallbackRadius * 0.6,
+            y1: cy,
+        x2: cx + fallbackRadius * 0.6,
+            y2: cy,
+            stroke,
+        'stroke-width': 1.5,
+        'stroke-linecap': 'round',
+          })
+        )
     return nodes
   }
 
@@ -396,6 +358,7 @@ const registerCustomNodes = (instance: LogicFlow) => {
       self.height = DEFAULT_NODE_HEIGHT
       if (self.text) {
         self.text.editable = false
+        self.text.value = ''
       }
       self.draggable = true
     }
@@ -403,22 +366,33 @@ const registerCustomNodes = (instance: LogicFlow) => {
     getDefaultAnchor() {
       const self = this as any
       const { x, y, width, height } = self
-      const halfW = width / 2
-      const halfH = height / 2
+      const radius = Math.min(width, height) / 2
+      const diagonalOffset = radius * Math.SQRT1_2
       return [
-        { x, y: y - halfH, id: `${self.id}_top`, type: 'top' },
-        { x: x + halfW, y, id: `${self.id}_right`, type: 'right' },
-        { x, y: y + halfH, id: `${self.id}_bottom`, type: 'bottom' },
-        { x: x - halfW, y, id: `${self.id}_left`, type: 'left' },
-        { x: x + halfW * 0.7, y: y - halfH * 0.7, id: `${self.id}_top_right`, type: 'top-right' },
-        { x: x + halfW * 0.7, y: y + halfH * 0.7, id: `${self.id}_bottom_right`, type: 'bottom-right' },
-        { x: x - halfW * 0.7, y: y + halfH * 0.7, id: `${self.id}_bottom_left`, type: 'bottom-left' },
-        { x: x - halfW * 0.7, y: y - halfH * 0.7, id: `${self.id}_top_left`, type: 'top-left' },
+        { x, y: y - radius, id: `${self.id}_top`, type: 'top' },
+        { x: x + radius, y, id: `${self.id}_right`, type: 'right' },
+        { x, y: y + radius, id: `${self.id}_bottom`, type: 'bottom' },
+        { x: x - radius, y, id: `${self.id}_left`, type: 'left' },
+        { x: x + diagonalOffset, y: y - diagonalOffset, id: `${self.id}_top_right`, type: 'top-right' },
+        { x: x + diagonalOffset, y: y + diagonalOffset, id: `${self.id}_bottom_right`, type: 'bottom-right' },
+        { x: x - diagonalOffset, y: y + diagonalOffset, id: `${self.id}_bottom_left`, type: 'bottom-left' },
+        { x: x - diagonalOffset, y: y - diagonalOffset, id: `${self.id}_top_left`, type: 'top-left' },
       ]
     }
 
     getAnchors() {
       return this.getDefaultAnchor()
+    }
+
+    getAnchorStyle() {
+      const style = typeof super.getAnchorStyle === 'function' ? super.getAnchorStyle() : {}
+      return {
+        ...style,
+        r: 2.5,
+        stroke: '#2563eb',
+        'stroke-width': 1.5,
+        fill: '#ffffff',
+      }
     }
   }
 
@@ -429,8 +403,14 @@ const registerCustomNodes = (instance: LogicFlow) => {
       const properties = typeof (model as any).getProperties === 'function'
         ? (model as any).getProperties()
         : (model as any).properties || {}
-      const rawType = (properties.rawType as CanvasNodeType) || CanvasNodeType.CUSTOM
-      const nodeColor = properties.color || TYPE_COLOR_MAP[rawType] || '#2563eb'
+      // 优先使用保存的图标类型，如果没有则默认使用 HOST 类型，不再回退到 rawType
+      const savedIcon = properties.icon || properties.iconType
+      const iconType = savedIcon
+        ? (typeof savedIcon === 'string' ? normalizeNodeType(savedIcon) : (savedIcon as CanvasNodeType))
+        : CanvasNodeType.HOST
+      const rawType = normalizeNodeType(properties.rawType || properties.type || CanvasNodeType.HOST)
+      // 优先使用保存的自定义颜色
+      const nodeColor = properties.customColor || properties.color || TYPE_COLOR_MAP[rawType] || '#2563eb'
       const hostData = properties.data || {}
       const hostname = hostData.hostname || hostData.name || ''
       const ip = hostData.ip || hostData.ip_address || ''
@@ -460,13 +440,21 @@ const registerCustomNodes = (instance: LogicFlow) => {
       }
       const titleNode = tooltipLines.length > 0 ? h('title', {}, tooltipLines.join('\n')) : null
 
+      const modelAny = model as any
+      const isSelected =
+        (typeof modelAny.getState === 'function' && modelAny.getState() === 'selected') ||
+        modelAny.state === 'selected' ||
+        (modelAny.graphModel?.selectElement?.id === modelAny.id) ||
+        !!modelAny.isSelected
+
       const highlightCircle = h('circle', {
         cx: x,
         cy: y,
         r: outerRadius,
         fill: '#ffffff',
-        stroke: '#e2e8f0',
-        'stroke-width': 1.5,
+        stroke: isSelected ? nodeColor : '#e2e8f0',
+        'stroke-width': isSelected ? 2.5 : 1.5,
+        opacity: isSelected ? 0.6 : 1,
       })
 
       const headerClip = h('circle', {
@@ -481,7 +469,7 @@ const registerCustomNodes = (instance: LogicFlow) => {
         cx: x,
         cy: y,
         r: innerRadius,
-        fill: '#ffffff',
+        fill: isSelected ? (TYPE_TINT_MAP[rawType] || '#e0f2fe') : '#ffffff',
         stroke: '#ffffff',
         'stroke-width': 4,
       })
@@ -494,7 +482,7 @@ const registerCustomNodes = (instance: LogicFlow) => {
         opacity: 0.96,
       })
 
-      const iconNodes = createIconNodes(rawType, x, y, '#ffffff')
+      const iconNodes = createIconNodes(iconType, x, y, '#ffffff', innerRadius * 1.35)
 
       const labelText = h('text', {
         x,
@@ -631,17 +619,49 @@ const attachEventHandlers = () => {
     })
   })
 
-  lf.on('edge:add', ({ data }: { data: any }) => {
-    const edge = mapLfEdgeToCanvasEdge(data)
-    emit('edge:added', edge)
-  })
+  // 跟踪正在调整的边（锚点移动）
+  // LogicFlow 在拖动锚点时，会先触发 edge:delete，然后触发 edge:add
+  // 我们需要跟踪这个过程，避免误删除关系
+  let adjustingEdgeId: string | null = null
+  let adjustingEdgeData: any = null
 
   lf.on('edge:delete', ({ data }: { data: any }) => {
+    const edgeId = data?.id ? String(data.id) : null
+    // 如果边有ID，可能是锚点调整，先保存数据
+    if (edgeId) {
+      adjustingEdgeId = edgeId
+      adjustingEdgeData = data
+      // 不立即触发删除事件，等待 edge:add 确认
+      return
+    }
+    // 没有ID的边，直接删除
     const edge = mapLfEdgeToCanvasEdge(data)
     emit('edge:removed', edge)
   })
 
+  lf.on('edge:add', ({ data }: { data: any }) => {
+    const edgeId = data?.id ? String(data.id) : null
+    // 如果这是正在调整的边，说明是锚点移动，只更新source/target
+    if (adjustingEdgeId && edgeId === adjustingEdgeId) {
+      const edge = mapLfEdgeToCanvasEdge(data)
+      emit('edge:added', { ...edge, _isAdjusting: true })
+      adjustingEdgeId = null
+      adjustingEdgeData = null
+      return
+    }
+    // 正常添加边
+    const edge = mapLfEdgeToCanvasEdge(data)
+    emit('edge:added', edge)
+  })
+
   lf.on('blank:click', () => {
+    // 如果点击空白区域时还有未处理的调整，说明调整被取消，需要恢复删除
+    if (adjustingEdgeId && adjustingEdgeData) {
+      const edge = mapLfEdgeToCanvasEdge(adjustingEdgeData)
+      emit('edge:removed', edge)
+    }
+    adjustingEdgeId = null
+    adjustingEdgeData = null
     emit('blank:click')
   })
 
@@ -653,22 +673,28 @@ const attachEventHandlers = () => {
 
 const mapLfNodeToCanvasNode = (node: any): CanvasNodeData => {
   const properties = node.properties || {}
+  const iconType = normalizeNodeType(properties.icon || properties.iconType || properties.rawType)
   return {
     id: node.id,
-    type: properties.rawType || CanvasNodeType.CUSTOM,
+    type: iconType,
     x: node.x,
     y: node.y,
     label: properties.label || node.text?.value || '',
-    icon: properties.icon,
-    color: properties.color,
+    icon: iconType,
+    color: properties.customColor || properties.color,
     bindingHostId: properties.bindingHostId,
     status: properties.status,
-    data: properties.data || {},
+    data: {
+      ...(properties.data || {}),
+      iconType,
+      customColor: properties.customColor || properties.color,
+    },
   }
 }
 
 const mapLfEdgeToCanvasEdge = (edge: any): CanvasEdgeData => {
   const properties = edge.properties || {}
+  const style = edge.style || {}
   return {
     id: edge.id,
     source: edge.sourceNodeId,
@@ -676,12 +702,17 @@ const mapLfEdgeToCanvasEdge = (edge: any): CanvasEdgeData => {
     relationshipType: properties.relationshipType,
     label: edge.text?.value || properties.relationshipType || '',
     description: properties.description,
+    edgeType: properties.edgeType || edge.type || EdgeType.POLYLINE,
+    strokeDasharray: style.strokeDasharray || properties.strokeDasharray || '',
+    strokeWidth: style.strokeWidth || properties.strokeWidth || 2,
+    stroke: style.stroke || properties.stroke || '#94a3b8',
     data: properties.data || {},
   }
 }
 
 const addNode = (node: CanvasNodeData) => {
   if (!lf) return
+  const iconType = normalizeNodeType(node.icon || node.data?.iconType || node.type)
   lf.addNode({
     id: String(node.id),
     type: 'device-node',
@@ -692,26 +723,48 @@ const addNode = (node: CanvasNodeData) => {
       label: node.label,
       icon: node.icon,
       color: node.color,
+      customColor: node.data?.customColor ?? node.color,
+      iconType,
       bindingHostId: node.bindingHostId,
       status: node.status,
       data: node.data || {},
-      rawType: node.type,
+      rawType: iconType,
     },
   })
 }
 
 const addEdge = (edge: CanvasEdgeData) => {
   if (!lf) return
+  const edgeType = edge.edgeType || EdgeType.POLYLINE
+  const strokeDasharray = edge.strokeDasharray || ''
+  const strokeWidth = typeof edge.strokeWidth === 'number' 
+    ? edge.strokeWidth 
+    : edge.strokeWidth === 'thin' 
+      ? 1 
+      : edge.strokeWidth === 'thick' 
+        ? 3 
+        : 2
+  const stroke = edge.stroke || '#94a3b8'
+  
   lf.addEdge({
     id: edge.id ? String(edge.id) : undefined,
-    type: 'polyline',
+    type: edgeType,
     sourceNodeId: String(edge.source),
     targetNodeId: String(edge.target),
     text: edge.label || edge.relationshipType,
     properties: {
       relationshipType: edge.relationshipType,
       description: edge.description,
+      edgeType,
+      strokeDasharray,
+      strokeWidth,
+      stroke,
       data: edge.data || {},
+    },
+    style: {
+      strokeDasharray,
+      strokeWidth,
+      stroke,
     },
   })
 }

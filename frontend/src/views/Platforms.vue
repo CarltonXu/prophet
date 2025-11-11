@@ -486,6 +486,7 @@
             v-model="platformForm.name"
             type="text"
             required
+            placeholder="Enter platform name"
             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -496,7 +497,6 @@
             required
             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">{{ $t('hosts.pleaseSelect') }}</option>
             <option value="vmware">VMware</option>
             <option value="openstack">OpenStack</option>
             <option value="aliyun">{{ $t('platforms.aliyun') }}</option>
@@ -510,6 +510,7 @@
               v-model="platformForm.host"
               type="text"
               required
+              placeholder="Enter host address"
               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -518,6 +519,7 @@
             <input
               v-model.number="platformForm.port"
               type="number"
+              placeholder="Enter port number"
               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -529,6 +531,7 @@
               v-model="platformForm.username"
               type="text"
               required
+              placeholder="Enter username"
               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -550,6 +553,7 @@
           <input
             v-model="platformForm.region"
             type="text"
+            placeholder="Enter region"
             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -997,6 +1001,7 @@ const loadPlatforms = async () => {
 
 const openCreateModal = () => {
   platformForm.value = {
+    type: 'vmware',
     port: 443,
   }
   editingPlatformId.value = null

@@ -317,6 +317,142 @@
               <PhotoIcon class="h-4 w-4" />
               <span>{{ $t('applications.canvasExportImage') }}</span>
             </button>
+            <!-- Edge Style Editor -->
+            <div class="relative edge-style-menu-container" v-if="selectedCanvasEdge">
+              <button
+                @click.stop="showEdgeStyleMenu = !showEdgeStyleMenu"
+                class="inline-flex items-center gap-1 rounded-md border border-purple-300 bg-purple-50 px-3 py-1 font-medium text-purple-700 transition hover:bg-purple-100"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+                <span>{{ $t('applications.edgeStyle') }}</span>
+              </button>
+              <Transition
+                enter-active-class="transition ease-out duration-100"
+                enter-from-class="transform opacity-0 scale-95"
+                enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition ease-in duration-75"
+                leave-from-class="transform opacity-100 scale-100"
+                leave-to-class="transform opacity-0 scale-95"
+              >
+                <div
+                  v-if="showEdgeStyleMenu"
+                  @click.stop
+                  class="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50 edge-style-menu-container divide-y divide-gray-100"
+                >
+                  <div class="p-4 space-y-4">
+                    <!-- Edge Type -->
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">{{ $t('applications.edgeType') }}</label>
+                      <div class="grid grid-cols-3 gap-2">
+                        <button
+                          @click="applyEdgeStyle({ edgeType: 'polyline' })"
+                          :class="edgeForm.edgeType === 'polyline' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeTypePolyline') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ edgeType: 'line' })"
+                          :class="edgeForm.edgeType === 'line' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeTypeLine') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ edgeType: 'bezier' })"
+                          :class="edgeForm.edgeType === 'bezier' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeTypeBezier') }}
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Edge Style -->
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">{{ $t('applications.edgeStyle') }}</label>
+                      <div class="grid grid-cols-4 gap-2">
+                        <button
+                          @click="applyEdgeStyle({ strokeDasharray: '' })"
+                          :class="edgeForm.strokeDasharray === '' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeStyleSolid') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ strokeDasharray: '5 5' })"
+                          :class="edgeForm.strokeDasharray === '5 5' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeStyleDashed') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ strokeDasharray: '10 5' })"
+                          :class="edgeForm.strokeDasharray === '10 5' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeStyleLongDashed') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ strokeDasharray: '3 3' })"
+                          :class="edgeForm.strokeDasharray === '3 3' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-3 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeStyleDotted') }}
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Edge Width -->
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">{{ $t('applications.edgeWidth') }}</label>
+                      <div class="grid grid-cols-3 gap-2">
+                        <button
+                          @click="applyEdgeStyle({ strokeWidth: 1 })"
+                          :class="edgeForm.strokeWidth === 1 ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-4 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeWidthThin') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ strokeWidth: 2 })"
+                          :class="edgeForm.strokeWidth === 2 ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-4 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeWidthMedium') }}
+                        </button>
+                        <button
+                          @click="applyEdgeStyle({ strokeWidth: 3 })"
+                          :class="edgeForm.strokeWidth === 3 ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'"
+                          class="px-4 py-2 text-sm font-medium rounded-md border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
+                          {{ $t('applications.edgeWidthThick') }}
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Edge Color -->
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">{{ $t('applications.edgeColor') }}</label>
+                      <div class="flex items-center gap-3">
+                        <input
+                          type="color"
+                          :value="edgeForm.stroke"
+                          @input="applyEdgeStyle({ stroke: ($event.target as HTMLInputElement).value })"
+                          class="h-10 w-16 rounded-md border border-gray-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all"
+                        />
+                        <input
+                          type="text"
+                          :value="edgeForm.stroke"
+                          @input="applyEdgeStyle({ stroke: ($event.target as HTMLInputElement).value })"
+                          class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all"
+                          placeholder="#94a3b8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
+            </div>
             <button
               @click="toggleCanvasFullscreen"
               class="rounded-md border border-gray-300 bg-white px-3 py-1 font-medium text-gray-600 transition hover:bg-gray-50"
@@ -588,6 +724,11 @@
                     class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
+                <div class="rounded-md border border-blue-100 bg-blue-50 p-3">
+                  <p class="text-xs text-blue-700">
+                    {{ $t('applications.edgeStyleHint') }}
+                  </p>
+                </div>
                 <div class="flex flex-col gap-2">
                   <button
                     @click="updateEdgeProperties"
@@ -663,7 +804,7 @@
     <Modal
       :open="showResourceBindingModal"
       @close="handleResourceBindingCancel"
-      :title="$t('applications.resourceBindingTitle')"
+      :title="selectedResourceHostId && !pendingResourceDefinition ? $t('applications.selectResourceType') : $t('applications.resourceBindingTitle')"
       max-width="lg"
     >
       <div class="space-y-5">
@@ -680,7 +821,49 @@
           </p>
         </div>
 
-        <div>
+        <!-- 添加主机后选择资源类型 -->
+        <div v-if="selectedResourceHostId && !pendingResourceDefinition">
+          <div class="mb-4 rounded-md border border-blue-100 bg-blue-50 px-4 py-3">
+            <p class="text-sm font-medium text-blue-900">
+              {{ $t('applications.selectResourceTypeForHost') }}
+            </p>
+            <p class="mt-1 text-xs text-blue-700" v-if="currentSelectedHost">
+              {{ currentSelectedHost.ip }}
+              <span v-if="currentSelectedHost.hostname" class="ml-1">
+                • {{ currentSelectedHost.hostname }}
+              </span>
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div
+              v-for="resource in resourceLibrary"
+              :key="resource.key"
+              @click="handleResourceSelected(resource)"
+              class="cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-purple-500 hover:bg-purple-50"
+              :class="selectedResourceType === resource.key ? 'border-purple-500 bg-purple-50' : 'border-gray-200'"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-12 w-12 items-center justify-center rounded-full"
+                  :style="{ backgroundColor: resource.color + '20' }"
+                >
+                  <component
+                    :is="RESOURCE_ICON_COMPONENTS[resource.key]"
+                    class="h-6 w-6"
+                    :style="{ color: resource.color }"
+                  />
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">{{ resource.label }}</p>
+                  <p class="text-xs text-gray-500">{{ resource.description }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 原有：从资源库拖拽后选择主机 -->
+        <div v-else>
           <label class="block text-sm font-medium text-gray-700">
             {{ $t('applications.resourceBindingSelectHost') }}
           </label>
@@ -748,12 +931,22 @@
           {{ $t('common.cancel') }}
         </button>
         <button
+          v-if="pendingResourceDefinition"
           type="button"
           @click="confirmResourceBinding"
           :disabled="!selectedResourceHostId || bindingResource"
           class="inline-flex w-full justify-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 sm:ml-3 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
         >
           {{ bindingResource ? $t('common.saving') : $t('applications.resourceBindingConfirm') }}
+        </button>
+        <button
+          v-if="selectedResourceHostId && !pendingResourceDefinition"
+          type="button"
+          @click="confirmResourceTypeSelection"
+          :disabled="!selectedResourceType || bindingResource"
+          class="inline-flex w-full justify-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 sm:ml-3 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+        >
+          {{ bindingResource ? $t('common.saving') : $t('common.confirm') }}
         </button>
       </template>
     </Modal>
@@ -846,7 +1039,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, reactive, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, computed, watch, reactive, nextTick, onBeforeUnmount, Transition } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { applicationsApi, type HostRelationship } from '@/api/applications'
@@ -907,13 +1100,18 @@ const nodeBindingHostId = ref<string>('')
 const updatingNodeBinding = ref(false)
 const edgeForm = reactive({
   relationship_type: 'member',
-  description: ''
+  description: '',
+  edgeType: 'polyline',
+  strokeDasharray: '',
+  strokeWidth: 2,
+  stroke: '#94a3b8'
 })
 const updatingEdge = ref(false)
 const suppressedEdgeRemovals = new Set<string>()
 const hostLibraryKeyword = ref('')
 const hostLibraryAddingId = ref<number | null>(null)
 const selectedLayout = ref<'grid' | 'horizontal' | 'vertical'>('grid')
+const showEdgeStyleMenu = ref(false)
 const resourceLabel = ref('')
 const isCanvasFullscreen = ref(false)
 const draggingResourceKey = ref<string | null>(null)
@@ -1119,6 +1317,18 @@ const pendingResourcePosition = ref<{ x: number; y: number } | null>(null)
 const selectedResourceHostId = ref<number | null>(null)
 const resourceBindingSearch = ref('')
 const bindingResource = ref(false)
+const pendingResourceSelectionHosts = ref<number[]>([])
+const selectedResourceType = ref<string | null>(null)
+// 存储待添加的主机信息（用于在资源选择弹窗中显示，但还未真正添加到应用）
+const pendingHostsInfo = ref<Map<number, any>>(new Map())
+
+const currentSelectedHost = computed(() => {
+  if (!selectedResourceHostId.value) return null
+  // 优先从待添加的主机信息中查找，如果找不到再从已添加的主机中查找
+  const pendingHost = pendingHostsInfo.value.get(selectedResourceHostId.value)
+  if (pendingHost) return pendingHost
+  return hosts.value.find((h: any) => h.id === selectedResourceHostId.value) || null
+})
 
 const filteredBindableHosts = computed(() => {
   const map = new Map<number, { host: any; inApplication: boolean }>()
@@ -1270,25 +1480,6 @@ const getHostLabel = (hostId: number) => {
   return host.hostname || host.ip || `#${hostId}`
 }
 
-const mapGroupToNodeType = (group?: string): CanvasNodeType => {
-  const normalized = (group || '').toLowerCase()
-  if (['network', 'switch', 'router', 'firewall', 'load_balancer'].includes(normalized)) {
-    return CanvasNodeType.NETWORK
-  }
-  if (['storage', 'disk', 'san', 'nas'].includes(normalized)) {
-    return CanvasNodeType.STORAGE
-  }
-  if (['object_storage', 'oss', 'bucket', 'cos', 's3'].includes(normalized)) {
-    return CanvasNodeType.OBJECT_STORAGE
-  }
-  if (['database', 'db', 'mysql', 'postgres', 'sql', 'mongodb'].includes(normalized)) {
-    return CanvasNodeType.DATABASE
-  }
-  if (['service', 'application', 'middleware', 'app', 'api'].includes(normalized)) {
-    return CanvasNodeType.SERVICE
-  }
-  return CanvasNodeType.HOST
-}
 
 const getStatusLabel = (node: any) => {
   if (typeof node?.is_physical === 'boolean') {
@@ -1339,35 +1530,102 @@ const refreshSelections = () => {
       updatedNode && !updatedNode.bindingHostId ? updatedNode.label : ''
   }
   if (selectedCanvasEdge.value) {
-    const updatedEdge = canvasEdges.value.find((edge) => edge.id === selectedCanvasEdge.value?.id)
-    selectedCanvasEdge.value = updatedEdge || null
-    edgeForm.relationship_type = updatedEdge?.relationshipType || 'member'
-    edgeForm.description = updatedEdge?.description || ''
+    // 从 canvasEdges 中获取最新的边数据，确保使用保存的样式
+    const updatedEdge = canvasEdges.value.find((edge) => {
+      if (selectedCanvasEdge.value?.id && edge.id) {
+        return String(edge.id) === String(selectedCanvasEdge.value.id)
+      }
+      return edge.source === selectedCanvasEdge.value?.source && edge.target === selectedCanvasEdge.value?.target
+    })
+    selectedCanvasEdge.value = updatedEdge || selectedCanvasEdge.value
+    if (updatedEdge) {
+      // 从最新的边数据中加载样式，确保每条边独立
+      edgeForm.relationship_type = updatedEdge.relationshipType || 'member'
+      edgeForm.description = updatedEdge.description || ''
+      edgeForm.edgeType = updatedEdge.edgeType || 'polyline'
+      edgeForm.strokeDasharray = updatedEdge.strokeDasharray || ''
+      edgeForm.strokeWidth = typeof updatedEdge.strokeWidth === 'number' 
+        ? updatedEdge.strokeWidth 
+        : (updatedEdge.strokeWidth === 'thin' ? 1 : updatedEdge.strokeWidth === 'thick' ? 3 : 2)
+      edgeForm.stroke = updatedEdge.stroke || '#94a3b8'
+    }
   }
 }
 
 const syncCanvasEdgesFromRelationships = () => {
-  if (!relationships.value.length) return
+  if (!relationships.value.length) {
+    // 如果没有关系，清空所有边
+    canvasEdges.value = []
+    return
+  }
+  
+  // 创建关系ID到关系的映射
   const relationMap = new Map<number, any>()
   relationships.value.forEach((relation) => {
     if (relation?.id) {
       relationMap.set(relation.id, relation)
     }
   })
-  canvasEdges.value = canvasEdges.value.map((edge) => {
-    const relation = relationMap.get(Number(edge.id))
-    if (!relation) return edge
-    return {
-      ...edge,
-      relationshipType: relation.relationship_type || edge.relationshipType,
-      label: getRelationshipLabel(relation.relationship_type || edge.relationshipType),
-      description: relation.description || '',
+  
+  // 创建已存在的边的映射（通过 source-target 或 id）
+  const existingEdgesMap = new Map<string, CanvasEdgeData>()
+  canvasEdges.value.forEach((edge) => {
+    const key = edge.id ? String(edge.id) : `${edge.source}-${edge.target}`
+    existingEdgesMap.set(key, edge)
+  })
+  
+  // 从关系数据创建或更新边
+  const newEdges: CanvasEdgeData[] = []
+  relationships.value.forEach((relation) => {
+    if (!relation?.id || !relation.from_host_id || !relation.to_host_id) return
+    
+    const sourceId = String(relation.from_host_id)
+    const targetId = String(relation.to_host_id)
+    const edgeKey = String(relation.id)
+    
+    // 查找已存在的边
+    const existingEdge = existingEdgesMap.get(edgeKey) || existingEdgesMap.get(`${sourceId}-${targetId}`)
+    
+    if (existingEdge) {
+      // 更新已存在的边，保留所有样式属性
+      newEdges.push({
+        ...existingEdge,
+        id: String(relation.id),
+        source: sourceId,
+        target: targetId,
+        relationshipType: relation.relationship_type || existingEdge.relationshipType || 'member',
+        label: getRelationshipLabel(relation.relationship_type || existingEdge.relationshipType || 'member'),
+        description: relation.description || existingEdge.description || '',
+        // 保留样式属性
+        edgeType: existingEdge.edgeType || 'polyline',
+        strokeDasharray: existingEdge.strokeDasharray || '',
+        strokeWidth: existingEdge.strokeWidth || 2,
+        stroke: existingEdge.stroke || '#94a3b8',
       data: {
-        ...(edge.data || {}),
+          ...(existingEdge.data || {}),
         relationship: relation
       }
+      })
+    } else {
+      // 创建新边，设置默认样式属性
+      newEdges.push({
+        id: String(relation.id),
+        source: sourceId,
+        target: targetId,
+        relationshipType: relation.relationship_type || 'member',
+        label: getRelationshipLabel(relation.relationship_type || 'member'),
+        description: relation.description || '',
+        // 设置默认样式属性
+        edgeType: 'polyline',
+        strokeDasharray: '',
+        strokeWidth: 2,
+        stroke: '#94a3b8',
+        data: { relationship: relation }
+      })
     }
   })
+  
+  canvasEdges.value = newEdges
   refreshSelections()
 }
 
@@ -1379,8 +1637,11 @@ const normalizeResourceNode = (raw: any, index = 0): CanvasNodeData => {
       : undefined
   const resourceKey = raw?.data?.resourceKey || raw?.resourceKey || raw?.key
   const libraryInfo = resourceKey ? resourceLibraryMap.value.get(resourceKey) : undefined
-  const nodeType = (raw?.type || libraryInfo?.type || CanvasNodeType.CUSTOM) as CanvasNodeType
-  const color = raw?.color || getTypeColor(nodeType)
+  // 优先使用保存的图标类型，如果没有则使用资源库的类型，最后默认 CUSTOM
+  const savedIconType = raw?.icon || raw?.data?.iconType
+  const icon = savedIconType || libraryInfo?.type || CanvasNodeType.CUSTOM
+  const nodeType = (raw?.type || icon) as CanvasNodeType
+  const color = raw?.color || raw?.data?.customColor || raw?.data?.color || getTypeColor(nodeType)
   const label =
     raw?.label ||
     libraryInfo?.label ||
@@ -1396,7 +1657,7 @@ const normalizeResourceNode = (raw: any, index = 0): CanvasNodeData => {
     y: typeof raw?.y === 'number' ? raw.y : position.y,
     label,
     color,
-    icon: raw?.icon || libraryInfo?.type || nodeType,
+    icon,
     bindingHostId,
     status,
     data: {
@@ -1405,7 +1666,9 @@ const normalizeResourceNode = (raw: any, index = 0): CanvasNodeData => {
       resourceKey: resourceKey || libraryInfo?.key || nodeType,
       displayStatus: status,
       color,
-      label
+      label,
+      iconType: icon,
+      customColor: color
     }
   }
 }
@@ -1455,16 +1718,19 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
       const basePosition = computeInitialPosition(index)
       const x = typeof rawNode?.x === 'number' ? rawNode.x : overlay?.x ?? basePosition.x
       const y = typeof rawNode?.y === 'number' ? rawNode.y : overlay?.y ?? basePosition.y
-      const nodeType = (overlay?.type || rawNode?.type || mapGroupToNodeType(hostRecord.device_type)) as CanvasNodeType
-      const color = overlay?.color || rawNode?.color || getTypeColor(nodeType)
+      // 优先使用保存的图标类型，如果没有则默认使用 HOST 类型，不再使用设备类型映射
+      const savedIconType = overlay?.icon || rawNode?.icon || rawNode?.data?.iconType
+      const icon = savedIconType || CanvasNodeType.HOST
+      const nodeType = (overlay?.type || rawNode?.type || icon) as CanvasNodeType
+      const color = overlay?.color || rawNode?.color || rawNode?.data?.customColor || rawNode?.data?.color || getTypeColor(nodeType)
+      // label 优先使用主机名，而不是资源类型的名称
       const label =
-        overlay?.label ||
         rawNode?.label ||
         hostRecord.hostname ||
         hostRecord.ip ||
+        overlay?.label ||
         `#${hostId}`
       const status = overlay?.status || getStatusLabel(hostRecord)
-      const icon = overlay?.icon || rawNode?.icon || nodeType
 
       hostNodes.push({
         id: hostId,
@@ -1481,7 +1747,9 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
           ...(rawNode?.data || {}),
           ...(overlay?.data || {}),
           resource: !!overlay,
-          color
+          color,
+          iconType: icon,
+          customColor: color
         }
       })
       seenHostIds.add(hostId)
@@ -1499,7 +1767,8 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
   hosts.value.forEach((host, hostIndexPosition) => {
     if (!seenHostIds.has(host.id)) {
       const position = computeInitialPosition(hostNodes.length + hostIndexPosition)
-      const nodeType = mapGroupToNodeType(host.device_type)
+      // 旧数据默认使用 HOST 类型
+      const nodeType = CanvasNodeType.HOST
       const color = getTypeColor(nodeType)
       hostNodes.push({
         id: host.id,
@@ -1514,7 +1783,8 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
         data: {
           ...host,
           resource: false,
-          color
+          color,
+          iconType: nodeType
         }
       })
     }
@@ -1533,20 +1803,28 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
         status: ''
       }
     }
-    const nodeType = node.type || mapGroupToNodeType(hostRecord.device_type)
-    const color = node.color || getTypeColor(nodeType)
+    // 优先使用保存的图标类型，如果没有则默认使用 HOST 类型，不再使用设备类型映射
+    const savedIconType = node.icon || node.data?.iconType
+    const icon = savedIconType || CanvasNodeType.HOST
+    const nodeType = node.type || icon
+    const color = node.color || node.data?.customColor || node.data?.color || getTypeColor(nodeType)
+    // label 优先使用主机名，而不是资源类型的名称
+    const label = hostRecord.hostname || hostRecord.ip || node.label || `#${node.bindingHostId}`
     return {
       ...node,
       type: nodeType,
+      icon,
       color,
+      label,
       status: getStatusLabel(hostRecord),
-      data: { ...hostRecord, resource: true, color }
+      data: { ...hostRecord, resource: true, color, iconType: icon, customColor: color, label }
     }
   })
 
   const unboundResources = resourceNodes.value.filter((node) => !node.bindingHostId)
   canvasNodes.value = [...hostNodes, ...unboundResources]
 
+  // 先处理从 graph 数据中来的边
   const relationMap = new Map<number, any>()
   relationships.value.forEach((relation) => {
     if (relation?.id) {
@@ -1554,16 +1832,20 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
     }
   })
 
-  canvasEdges.value = edges.map((edge: any) => {
+      const edgesFromGraph = edges.map((edge: any) => {
     const relation = edge?.id ? relationMap.get(Number(edge.id)) : null
     const relationshipType = edge?.relationshipType || relation?.relationship_type || edge?.label
     return {
-      id: edge?.id,
-      source: edge?.source ?? edge?.from,
-      target: edge?.target ?? edge?.to,
+          id: edge?.id ? String(edge.id) : undefined,
+          source: String(edge?.source ?? edge?.from ?? ''),
+          target: String(edge?.target ?? edge?.to ?? ''),
       relationshipType,
       label: relationshipType ? getRelationshipLabel(relationshipType) : edge?.label,
       description: edge?.description || relation?.description || '',
+          edgeType: edge?.edgeType || 'polyline',
+          strokeDasharray: edge?.strokeDasharray || '',
+          strokeWidth: edge?.strokeWidth || 2,
+          stroke: edge?.stroke || '#94a3b8',
       data: {
         ...(edge?.data || {}),
         relationship: relation
@@ -1571,15 +1853,96 @@ const syncCanvasData = (graph: { nodes?: any[]; edges?: any[]; resourceNodes?: a
     }
   })
 
+  // 从关系数据同步边（确保所有关系都有对应的边）
+  syncCanvasEdgesFromRelationships()
+  
+  // 合并从 graph 来的边和从关系同步来的边
+  // 优先使用从 graph 加载的边（包含样式信息），然后补充关系同步来的边
+  const edgesMap = new Map<string, CanvasEdgeData>()
+  // 先添加从关系同步来的边（作为基础）
+  canvasEdges.value.forEach(edge => {
+    if (edge.id) {
+      edgesMap.set(String(edge.id), edge)
+    } else {
+      edgesMap.set(`${edge.source}-${edge.target}`, edge)
+    }
+  })
+  // 再添加从 graph 来的边（优先保留样式信息，覆盖关系同步的边）
+  edgesFromGraph.forEach(edge => {
+    if (edge.id) {
+      const existingEdge = edgesMap.get(String(edge.id))
+      if (existingEdge) {
+        // 合并：优先使用 graph 中的样式（从服务器保存的），但保留关系数据
+        edgesMap.set(String(edge.id), {
+          ...existingEdge,
+          // 优先使用 graph 中的样式属性（从服务器加载的）
+          edgeType: edge.edgeType || existingEdge.edgeType || 'polyline',
+          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray || ''),
+          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth || 2),
+          stroke: edge.stroke || existingEdge.stroke || '#94a3b8',
+          // 保留其他属性
+          id: edge.id || existingEdge.id,
+          source: edge.source || existingEdge.source,
+          target: edge.target || existingEdge.target,
+          relationshipType: edge.relationshipType || existingEdge.relationshipType,
+          label: edge.label || existingEdge.label,
+          description: edge.description !== undefined ? edge.description : (existingEdge.description || ''),
+          // 确保关系数据不丢失
+          data: {
+            ...(existingEdge.data || {}),
+            ...(edge.data || {})
+          }
+        })
+      } else {
+        edgesMap.set(String(edge.id), edge)
+      }
+    } else if (edge.source && edge.target) {
+      const key = `${edge.source}-${edge.target}`
+      const existingEdge = edgesMap.get(key)
+      if (existingEdge) {
+        // 合并：优先使用 graph 中的样式（从服务器保存的），但保留关系数据
+        edgesMap.set(key, {
+          ...existingEdge,
+          // 优先使用 graph 中的样式属性（从服务器加载的）
+          edgeType: edge.edgeType || existingEdge.edgeType || 'polyline',
+          strokeDasharray: edge.strokeDasharray !== undefined ? edge.strokeDasharray : (existingEdge.strokeDasharray || ''),
+          strokeWidth: edge.strokeWidth !== undefined ? edge.strokeWidth : (existingEdge.strokeWidth || 2),
+          stroke: edge.stroke || existingEdge.stroke || '#94a3b8',
+          // 保留其他属性
+          id: edge.id || existingEdge.id,
+          source: edge.source || existingEdge.source,
+          target: edge.target || existingEdge.target,
+          relationshipType: edge.relationshipType || existingEdge.relationshipType,
+          label: edge.label || existingEdge.label,
+          description: edge.description !== undefined ? edge.description : (existingEdge.description || ''),
+          // 确保关系数据不丢失
+          data: {
+            ...(existingEdge.data || {}),
+            ...(edge.data || {})
+          }
+        })
+      } else {
+        edgesMap.set(key, edge)
+      }
+    }
+  })
+  
+  canvasEdges.value = Array.from(edgesMap.values())
+
   refreshSelections()
 }
 
 const clearCanvasSelection = () => {
   selectedCanvasNode.value = null
   selectedCanvasEdge.value = null
+  showEdgeStyleMenu.value = false // 关闭样式菜单
   nodeBindingHostId.value = ''
   edgeForm.relationship_type = 'member'
   edgeForm.description = ''
+  edgeForm.edgeType = 'polyline'
+  edgeForm.strokeDasharray = ''
+  edgeForm.strokeWidth = 2
+  edgeForm.stroke = '#94a3b8'
   resourceLabel.value = ''
 }
 
@@ -1588,22 +1951,43 @@ const handleCanvasReady = (lf: any) => {
 }
 
 const handleCanvasNodeClick = (node: CanvasNodeData) => {
-  selectedCanvasNode.value = node
+  // 确保节点数据是最新的
+  const latestNode = canvasNodes.value.find(n => idsEqual(n.id, node.id) || idsEqual(n.bindingHostId, node.bindingHostId)) || node
+  selectedCanvasNode.value = {
+    ...latestNode,
+    // 确保数据包含完整的主机信息
+    data: latestNode.data || node.data || {}
+  }
   selectedCanvasEdge.value = null
-  nodeBindingHostId.value = node.bindingHostId ? String(node.bindingHostId) : ''
-  if (node.bindingHostId) {
-    const overlay = resourceNodes.value.find((overlayNode) => overlayNode.bindingHostId === node.bindingHostId)
-    resourceLabel.value = overlay?.label || node.label
+  nodeBindingHostId.value = latestNode.bindingHostId ? String(latestNode.bindingHostId) : ''
+  if (latestNode.bindingHostId) {
+    const overlay = resourceNodes.value.find((overlayNode) => overlayNode.bindingHostId === latestNode.bindingHostId)
+    resourceLabel.value = overlay?.label || latestNode.label
   } else {
-    resourceLabel.value = node.label
+    resourceLabel.value = latestNode.label
   }
 }
 
 const handleCanvasEdgeClick = (edge: CanvasEdgeData) => {
-  selectedCanvasEdge.value = edge
+  // 从 canvasEdges 中获取最新的边数据，确保使用保存的样式
+  const latestEdge = canvasEdges.value.find(e => 
+    (e.id && edge.id && String(e.id) === String(edge.id)) ||
+    (e.source === edge.source && e.target === edge.target)
+  ) || edge
+  
+  selectedCanvasEdge.value = latestEdge
   selectedCanvasNode.value = null
-  edgeForm.relationship_type = edge.relationshipType || 'member'
-  edgeForm.description = edge.description || ''
+  showEdgeStyleMenu.value = false // 关闭样式菜单
+  
+  // 从最新的边数据中加载样式，确保每条边独立
+  edgeForm.relationship_type = latestEdge.relationshipType || 'member'
+  edgeForm.description = latestEdge.description || ''
+  edgeForm.edgeType = latestEdge.edgeType || 'polyline'
+  edgeForm.strokeDasharray = latestEdge.strokeDasharray || ''
+  edgeForm.strokeWidth = typeof latestEdge.strokeWidth === 'number' 
+    ? latestEdge.strokeWidth 
+    : (latestEdge.strokeWidth === 'thin' ? 1 : latestEdge.strokeWidth === 'thick' ? 3 : 2)
+  edgeForm.stroke = latestEdge.stroke || '#94a3b8'
 }
 
 const handleCanvasBlankClick = () => {
@@ -1656,37 +2040,221 @@ const updateNodeBinding = async () => {
   }
 
   updatingNodeBinding.value = true
-  const selectedId = selectedCanvasNode.value.id
+  // 保存当前节点的原始 icon 和资源信息，以便在重新加载后恢复
+  // 优先从 icon 字段获取，其次从 data.iconType，最后从 type 字段
+  const originalIcon = selectedCanvasNode.value.icon || 
+                       selectedCanvasNode.value.data?.iconType || 
+                       selectedCanvasNode.value.type ||
+                       CanvasNodeType.HOST
+  const originalResourceKey = selectedCanvasNode.value.data?.resourceKey
+  const originalColor = selectedCanvasNode.value.color || 
+                        selectedCanvasNode.value.data?.customColor || 
+                        selectedCanvasNode.value.data?.color
+  
   try {
     const appId = parseInt(route.params.id as string)
     if (currentBinding) {
       await applicationsApi.removeHost(appId, currentBinding)
+      // 更新本地状态：从 hosts 中移除旧绑定
+      hosts.value = hosts.value.filter(h => h.id !== currentBinding)
     }
     await applicationsApi.addHosts(appId, [targetHostId])
-    if (!selectedCanvasNode.value.bindingHostId) {
-      const overlayIndex = resourceNodes.value.findIndex((node) => node.id === selectedId)
-      if (overlayIndex >= 0) {
-        resourceNodes.value[overlayIndex] = {
-          ...resourceNodes.value[overlayIndex],
-          bindingHostId: targetHostId
+    
+    // 重新加载应用数据以确保与服务端同步（包括 hosts 和 graph）
+    try {
+      const [appRes, graphRes, relationshipRes] = await Promise.all([
+        applicationsApi.getApplication(appId),
+        applicationsApi.getGraph(appId).catch(() => ({ data: { nodes: [], edges: [] } })),
+        applicationsApi.getRelationships(appId).catch(() => ({ data: [] }))
+      ])
+      
+      // 更新应用和关系数据
+      application.value = appRes.data
+      relationships.value = relationshipRes.data || []
+      
+      // 更新 hosts（从应用数据中获取最新的 hosts）
+      if (application.value.hosts) {
+        hosts.value = application.value.hosts
+      }
+      
+      // 在重新同步画布数据之前，确保 graph 数据中包含原始 icon 信息
+      const graphData = graphRes.data || { nodes: [], edges: [] }
+      
+      // 删除所有指向旧 bindingHostId 的节点和资源节点
+      if (graphData.nodes && Array.isArray(graphData.nodes)) {
+        graphData.nodes = graphData.nodes.filter((node: any) => {
+          const nodeHostId = node?.bindingHostId !== undefined && node?.bindingHostId !== null
+            ? Number(node.bindingHostId)
+            : typeof node?.id === 'number' ? node.id : undefined
+          // 保留不是旧绑定主机的节点，或者是要更新为新绑定主机的节点
+          return !nodeHostId || nodeHostId !== currentBinding || nodeHostId === targetHostId
+        })
+        
+        // 获取新主机信息用于设置 label
+        const newHostRecord = hosts.value.find(h => h.id === targetHostId)
+        
+        // 更新节点：将旧 bindingHostId 的节点更新为新 bindingHostId，并保持原始 icon
+        graphData.nodes = graphData.nodes.map((node: any) => {
+          const nodeHostId = node?.bindingHostId !== undefined && node?.bindingHostId !== null
+            ? Number(node.bindingHostId)
+            : typeof node?.id === 'number' ? node.id : undefined
+          
+          if (nodeHostId === currentBinding || (nodeHostId === targetHostId && originalIcon)) {
+            // label 优先使用主机名
+            const nodeLabel = newHostRecord?.hostname || newHostRecord?.ip || node.label || `#${targetHostId}`
+            return {
+              ...node,
+              id: targetHostId,
+            bindingHostId: targetHostId,
+              icon: originalIcon || node.icon,
+              label: nodeLabel,
+              data: {
+                ...(node.data || {}),
+                iconType: originalIcon || node.data?.iconType || node.icon,
+                resourceKey: originalResourceKey || node.data?.resourceKey,
+                label: nodeLabel
+              }
+            }
+          }
+          return node
+        })
+      }
+      
+      if (graphData.resourceNodes && Array.isArray(graphData.resourceNodes)) {
+        // 删除所有指向旧 bindingHostId 的资源节点
+        graphData.resourceNodes = graphData.resourceNodes.filter((node: any) => {
+          const nodeHostId = node?.bindingHostId !== undefined && node?.bindingHostId !== null
+            ? Number(node.bindingHostId)
+            : undefined
+          return !nodeHostId || nodeHostId !== currentBinding
+        })
+        
+        // 获取新主机信息用于设置 label
+        const newHostRecord = hosts.value.find(h => h.id === targetHostId)
+        
+        // 更新资源节点：将指向新 bindingHostId 的资源节点保持原始 icon
+        graphData.resourceNodes = graphData.resourceNodes.map((node: any) => {
+          const nodeHostId = node?.bindingHostId !== undefined && node?.bindingHostId !== null
+            ? Number(node.bindingHostId)
+            : undefined
+          
+          if (nodeHostId === targetHostId) {
+            // label 优先使用主机名
+            const nodeLabel = newHostRecord?.hostname || newHostRecord?.ip || node.label || `#${targetHostId}`
+            return {
+              ...node,
+              id: targetHostId,
+              bindingHostId: targetHostId,
+              icon: originalIcon || node.icon,
+              label: nodeLabel,
+              data: {
+                ...(node.data || {}),
+                iconType: originalIcon || node.data?.iconType || node.icon,
+                resourceKey: originalResourceKey || node.data?.resourceKey,
+                label: nodeLabel
+              }
+            }
+          }
+          return node
+        })
+      }
+      
+      // 重新同步画布数据（这会基于服务端数据重新构建所有节点，避免重复）
+      syncCanvasData(graphData)
+    } catch (error: any) {
+      console.error('Failed to reload application data:', error)
+    }
+    
+    // 等待画布更新
+    await nextTick()
+    
+    // 手动更新新节点的 icon 和资源信息，确保保留原始 icon
+    // 更新 canvasNodes 中对应节点的 icon
+    canvasNodes.value = canvasNodes.value.map((node) => {
+      if (idsEqual(node.bindingHostId, targetHostId)) {
+        return {
+          ...node,
+          icon: originalIcon,
+          type: originalIcon as CanvasNodeType,
+          color: originalColor || node.color,
+          data: {
+            ...(node.data || {}),
+            iconType: originalIcon,
+            customColor: originalColor || node.data?.customColor || node.data?.color,
+            color: originalColor || node.data?.customColor || node.data?.color,
+            resourceKey: originalResourceKey || node.data?.resourceKey,
+            resource: !!originalResourceKey || node.data?.resource || false
+          }
         }
-        resourceNodes.value = [...resourceNodes.value]
+      }
+      return node
+    })
+      
+    // 更新 resourceNodes 中对应节点的 icon
+    const existingResourceNode = resourceNodes.value.find(n => idsEqual(n.bindingHostId, targetHostId))
+    if (existingResourceNode) {
+      resourceNodes.value = resourceNodes.value.map((node) => {
+        if (idsEqual(node.bindingHostId, targetHostId)) {
+          return {
+            ...node,
+            icon: originalIcon,
+            type: originalIcon as CanvasNodeType,
+            color: originalColor || node.color,
+            data: {
+              ...(node.data || {}),
+              iconType: originalIcon,
+              customColor: originalColor || node.data?.customColor || node.data?.color,
+              color: originalColor || node.data?.customColor || node.data?.color,
+              resourceKey: originalResourceKey || node.data?.resourceKey,
+              resource: true
+            }
+          }
+        }
+        return node
+      })
       } else {
+      // 如果 resourceNodes 中没有对应节点，创建一个新的资源节点
+      const hostNode = canvasNodes.value.find(n => idsEqual(n.bindingHostId, targetHostId))
+      if (hostNode) {
         resourceNodes.value = [
           ...resourceNodes.value,
           {
-            ...selectedCanvasNode.value,
-            id: selectedId,
-            bindingHostId: targetHostId,
-            data: { resource: true, label: selectedCanvasNode.value.label }
+            ...hostNode,
+            icon: originalIcon,
+            type: originalIcon as CanvasNodeType,
+            color: originalColor || hostNode.color,
+            data: {
+              ...(hostNode.data || {}),
+              iconType: originalIcon,
+              customColor: originalColor || hostNode.data?.customColor || hostNode.data?.color,
+              color: originalColor || hostNode.data?.customColor || hostNode.data?.color,
+              resourceKey: originalResourceKey || hostNode.data?.resourceKey || originalIcon,
+              resource: true
+            }
           }
         ]
-        resourceNodes.value = [...resourceNodes.value]
       }
     }
+        resourceNodes.value = [...resourceNodes.value]
+    canvasNodes.value = [...canvasNodes.value]
+    
+    // 保存更新后的布局
+    await saveCanvasLayout()
+    
+    // 更新选中节点，确保属性面板显示最新信息
+    const updatedNode = canvasNodes.value.find(n => idsEqual(n.bindingHostId, targetHostId))
+    if (updatedNode) {
+      selectedCanvasNode.value = updatedNode
+      nodeBindingHostId.value = String(targetHostId)
+      if (updatedNode.bindingHostId) {
+        const overlay = resourceNodes.value.find((overlayNode) => overlayNode.bindingHostId === updatedNode.bindingHostId)
+        resourceLabel.value = overlay?.label || updatedNode.label
+      } else {
+        resourceLabel.value = updatedNode.label
+      }
+    }
+    
     toastStore.success(t('applications.updateBindingSuccess'))
-    await loadApplication()
-    clearCanvasSelection()
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('applications.updateBindingFailed'))
   } finally {
@@ -1697,6 +2265,247 @@ const updateNodeBinding = async () => {
 const deleteSelectedNode = () => {
   if (!selectedCanvasNode.value?.bindingHostId) return
   removeHost(selectedCanvasNode.value.bindingHostId)
+}
+
+// 实时应用边的样式（无需保存按钮）
+const applyEdgeStyle = async (styleUpdate: Partial<typeof edgeForm>) => {
+  if (!selectedCanvasEdge.value?.id) return
+  
+  // 更新edgeForm（用于UI显示）
+  Object.assign(edgeForm, styleUpdate)
+  
+  const relationshipId = Number(selectedCanvasEdge.value.id)
+  if (!relationshipId) return
+  
+  // 更新本地边的样式属性 - 确保每条边独立保存样式
+  const edgeIndex = canvasEdges.value.findIndex(e => Number(e.id) === relationshipId)
+  if (edgeIndex >= 0) {
+    // 获取当前边的完整数据，只更新样式相关字段
+    const currentEdge = canvasEdges.value[edgeIndex]
+    const updatedEdge = {
+      ...currentEdge,
+      // 只更新样式相关的字段，保持其他字段不变
+      edgeType: styleUpdate.edgeType !== undefined ? styleUpdate.edgeType : currentEdge.edgeType,
+      strokeDasharray: styleUpdate.strokeDasharray !== undefined ? styleUpdate.strokeDasharray : currentEdge.strokeDasharray,
+      strokeWidth: styleUpdate.strokeWidth !== undefined ? styleUpdate.strokeWidth : currentEdge.strokeWidth,
+      stroke: styleUpdate.stroke !== undefined ? styleUpdate.stroke : currentEdge.stroke,
+    }
+    // 直接更新数组中的元素
+    canvasEdges.value[edgeIndex] = updatedEdge
+    // 同时更新 selectedCanvasEdge，确保选中状态同步
+    selectedCanvasEdge.value = {
+      ...selectedCanvasEdge.value,
+      ...updatedEdge
+    }
+    // 注意：不在这里创建新数组，避免触发 renderGraph 重新渲染所有边
+    // 我们直接更新 LogicFlow 中的边样式，而不是通过重新渲染整个图
+    
+    // 立即更新 LogicFlow 中的边样式 - 使用更新后的边数据，而不是 edgeForm
+    if (logicFlowInstance.value && selectedCanvasEdge.value.id) {
+      await nextTick()
+      try {
+        const lfEdge = logicFlowInstance.value.getEdgeModelById(String(selectedCanvasEdge.value.id))
+        if (lfEdge) {
+          // 如果边的类型改变了，需要重新创建边
+          if (styleUpdate.edgeType && lfEdge.type !== styleUpdate.edgeType) {
+            const sourceNode = lfEdge.sourceNodeId
+            const targetNode = lfEdge.targetNodeId
+            const text = lfEdge.text?.value || ''
+            const properties = lfEdge.properties || {}
+            logicFlowInstance.value.deleteEdge(String(selectedCanvasEdge.value.id))
+            await nextTick()
+            logicFlowInstance.value.addEdge({
+              id: String(selectedCanvasEdge.value.id),
+              type: updatedEdge.edgeType,
+              sourceNodeId: sourceNode,
+              targetNodeId: targetNode,
+              text,
+              properties: {
+                ...properties,
+                edgeType: updatedEdge.edgeType,
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              },
+              style: {
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              },
+            })
+            await nextTick()
+            // 确保新创建的边的样式正确应用
+            const newEdge = logicFlowInstance.value.getEdgeModelById(String(selectedCanvasEdge.value.id))
+            if (newEdge) {
+              newEdge.updateStyle({
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              })
+            }
+          } else {
+            // 只更新样式，不改变类型
+            // 构建新的样式对象 - 使用更新后的边数据
+            const newStyle: any = {}
+            if (updatedEdge.strokeDasharray) {
+              newStyle.strokeDasharray = updatedEdge.strokeDasharray
+            } else {
+              newStyle.strokeDasharray = ''
+            }
+            newStyle.strokeWidth = updatedEdge.strokeWidth
+            newStyle.stroke = updatedEdge.stroke
+            
+            // 更新 properties - 使用更新后的边数据
+            const newProperties = {
+              ...(lfEdge.properties || {}),
+              edgeType: updatedEdge.edgeType,
+              strokeDasharray: updatedEdge.strokeDasharray,
+              strokeWidth: updatedEdge.strokeWidth,
+              stroke: updatedEdge.stroke,
+            }
+            
+            // 使用 setProperties 而不是 updateProperties
+            if (typeof (lfEdge as any).setProperties === 'function') {
+              (lfEdge as any).setProperties(newProperties)
+            } else if (typeof (lfEdge as any).updateProperties === 'function') {
+              (lfEdge as any).updateProperties(newProperties)
+            } else {
+              // 直接设置 properties
+              (lfEdge as any).properties = newProperties
+            }
+            
+            // 更新 style - 使用 updateStyle 方法
+            if (typeof (lfEdge as any).updateStyle === 'function') {
+              (lfEdge as any).updateStyle(newStyle)
+            } else {
+              // 如果没有 updateStyle，直接设置 style
+              (lfEdge as any).style = { ...((lfEdge as any).style || {}), ...newStyle }
+            }
+            
+            // 直接操作 DOM 元素来确保样式立即生效（可选，因为 LogicFlow API 可能已经生效）
+            await nextTick()
+            // 等待更长时间确保 DOM 已更新
+            await new Promise(resolve => setTimeout(resolve, 50))
+            try {
+              // LogicFlow 使用 data-model-id 属性存储边的ID
+              const edgeId = String(selectedCanvasEdge.value.id)
+              // 尝试多种选择器
+              let edgeElement: Element | null = null
+              
+              // 方法1: 通过 data-model-id
+              edgeElement = document.querySelector(`[data-model-id="${edgeId}"]`)
+              
+              // 方法2: 通过 data-id
+              if (!edgeElement) {
+                edgeElement = document.querySelector(`[data-id="${edgeId}"]`)
+              }
+              
+              // 方法3: 通过 class 和 ID 组合查找（避免使用 # 选择器，因为 ID 可能以数字开头）
+              if (!edgeElement) {
+                const allEdges = document.querySelectorAll('.lf-edge')
+                allEdges.forEach((el) => {
+                  const modelId = el.getAttribute('data-model-id')
+                  if (modelId === edgeId) {
+                    edgeElement = el
+                  }
+                })
+              }
+              
+              // 方法4: 尝试查找所有可能的边元素
+              if (!edgeElement) {
+                // 查找所有包含该 ID 的元素
+                const allElements = document.querySelectorAll('[data-model-id], [data-id], [id]')
+                allElements.forEach((el) => {
+                  const modelId = el.getAttribute('data-model-id') || el.getAttribute('data-id') || el.getAttribute('id')
+                  if (modelId === edgeId) {
+                    edgeElement = el
+                  }
+                })
+              }
+              
+              // 方法5: 尝试通过 getElementById（如果 ID 是有效的）
+              if (!edgeElement && /^[a-zA-Z]/.test(edgeId)) {
+                edgeElement = document.getElementById(edgeId)
+              }
+              
+              if (edgeElement) {
+                // 查找所有 path 元素（边可能由多个path组成）
+                const pathElements = edgeElement.querySelectorAll('path')
+                pathElements.forEach((pathElement) => {
+                  if (newStyle.strokeDasharray) {
+                    pathElement.setAttribute('stroke-dasharray', newStyle.strokeDasharray)
+                  } else {
+                    pathElement.removeAttribute('stroke-dasharray')
+                  }
+                  pathElement.setAttribute('stroke-width', String(newStyle.strokeWidth))
+                  pathElement.setAttribute('stroke', newStyle.stroke)
+                })
+                
+                // 也尝试直接更新 edgeElement 的样式（如果是 polyline 或其他类型）
+                if (edgeElement instanceof SVGElement) {
+                  if (newStyle.strokeDasharray) {
+                    edgeElement.setAttribute('stroke-dasharray', newStyle.strokeDasharray)
+                  } else {
+                    edgeElement.removeAttribute('stroke-dasharray')
+                  }
+                  edgeElement.setAttribute('stroke-width', String(newStyle.strokeWidth))
+                  edgeElement.setAttribute('stroke', newStyle.stroke)
+                }
+                
+                // 查找 g 元素（LogicFlow 可能使用 g 包裹）
+                const gElements = edgeElement.querySelectorAll('g')
+                gElements.forEach((gElement) => {
+                  const paths = gElement.querySelectorAll('path')
+                  paths.forEach((pathElement) => {
+                    if (newStyle.strokeDasharray) {
+                      pathElement.setAttribute('stroke-dasharray', newStyle.strokeDasharray)
+                    } else {
+                      pathElement.removeAttribute('stroke-dasharray')
+                    }
+                    pathElement.setAttribute('stroke-width', String(newStyle.strokeWidth))
+                    pathElement.setAttribute('stroke', newStyle.stroke)
+                  })
+                })
+              }
+              // 移除警告，因为 LogicFlow API 可能已经生效，DOM 操作只是额外的保障
+            } catch (error) {
+              // 静默处理错误，不影响功能
+              // console.debug('Failed to update edge DOM (non-critical):', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to apply edge style in LogicFlow:', error)
+      }
+    }
+  }
+  
+  // 防抖保存到服务端
+  debouncedSaveEdgeStyle()
+}
+
+// 防抖保存边的样式
+let saveEdgeStyleTimeout: ReturnType<typeof setTimeout> | null = null
+const debouncedSaveEdgeStyle = () => {
+  if (saveEdgeStyleTimeout) {
+    clearTimeout(saveEdgeStyleTimeout)
+  }
+  saveEdgeStyleTimeout = setTimeout(() => {
+    saveEdgeStyleToServer()
+  }, 500) // 500ms 防抖
+}
+
+// 保存边的样式到服务端
+const saveEdgeStyleToServer = async () => {
+  if (!selectedCanvasEdge.value?.id) return
+  const relationshipId = Number(selectedCanvasEdge.value.id)
+  if (!relationshipId) return
+  
+  try {
+    await saveCanvasLayout()
+  } catch (error) {
+    console.warn('Failed to save edge style:', error)
+  }
 }
 
 const updateEdgeProperties = async () => {
@@ -1710,6 +2519,186 @@ const updateEdgeProperties = async () => {
       relationship_type: edgeForm.relationship_type,
       description: edgeForm.description
     })
+    
+    // 更新本地边的样式属性 - 使用 edgeForm 中的值（因为这是用户当前编辑的值）
+    const edgeIndex = canvasEdges.value.findIndex(e => Number(e.id) === relationshipId)
+    if (edgeIndex >= 0) {
+      // 获取当前边的完整数据，只更新关系类型、描述和样式
+      const currentEdge = canvasEdges.value[edgeIndex]
+      const updatedEdge = {
+        ...currentEdge,
+        relationshipType: edgeForm.relationship_type,
+        description: edgeForm.description,
+        // 保留样式属性（从 edgeForm 中获取，因为这是用户当前编辑的值）
+        edgeType: edgeForm.edgeType,
+        strokeDasharray: edgeForm.strokeDasharray,
+        strokeWidth: edgeForm.strokeWidth,
+        stroke: edgeForm.stroke,
+      }
+      canvasEdges.value[edgeIndex] = updatedEdge
+      // 同时更新 selectedCanvasEdge，确保选中状态同步
+      selectedCanvasEdge.value = {
+        ...selectedCanvasEdge.value,
+        ...updatedEdge
+      }
+      // 注意：不在这里创建新数组，避免触发 renderGraph 重新渲染所有边
+      // 我们直接更新 LogicFlow 中的边样式，而不是通过重新渲染整个图
+    }
+    
+    // 更新 LogicFlow 中的边样式 - 使用更新后的边数据
+    if (logicFlowInstance.value && selectedCanvasEdge.value.id) {
+      await nextTick()
+      try {
+        const lfEdge = logicFlowInstance.value.getEdgeModelById(String(selectedCanvasEdge.value.id))
+        if (lfEdge) {
+          // 获取更新后的边数据
+          const updatedEdge = canvasEdges.value.find(e => Number(e.id) === relationshipId)
+          if (!updatedEdge) return
+          
+          // 如果边的类型改变了，需要重新创建边
+          if (lfEdge.type !== updatedEdge.edgeType) {
+            const sourceNode = lfEdge.sourceNodeId
+            const targetNode = lfEdge.targetNodeId
+            const text = lfEdge.text?.value || ''
+            const properties = lfEdge.properties || {}
+            logicFlowInstance.value.deleteEdge(String(selectedCanvasEdge.value.id))
+            await nextTick()
+            logicFlowInstance.value.addEdge({
+              id: String(selectedCanvasEdge.value.id),
+              type: updatedEdge.edgeType,
+              sourceNodeId: sourceNode,
+              targetNodeId: targetNode,
+              text,
+              properties: {
+                ...properties,
+                edgeType: updatedEdge.edgeType,
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              },
+              style: {
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              },
+            })
+            await nextTick()
+            // 确保新创建的边的样式正确应用
+            const newEdge = logicFlowInstance.value.getEdgeModelById(String(selectedCanvasEdge.value.id))
+            if (newEdge) {
+              newEdge.updateStyle({
+                strokeDasharray: updatedEdge.strokeDasharray,
+                strokeWidth: updatedEdge.strokeWidth,
+                stroke: updatedEdge.stroke,
+              })
+            }
+          } else {
+            // 只更新样式，不改变类型
+            // 使用更新后的边数据
+            const newProperties = {
+              ...(lfEdge.properties || {}),
+              edgeType: updatedEdge.edgeType,
+              strokeDasharray: updatedEdge.strokeDasharray,
+              strokeWidth: updatedEdge.strokeWidth,
+              stroke: updatedEdge.stroke,
+            }
+            const newStyle = {
+              strokeDasharray: updatedEdge.strokeDasharray || '',
+              strokeWidth: updatedEdge.strokeWidth,
+              stroke: updatedEdge.stroke,
+            }
+            
+            if (typeof (lfEdge as any).setProperties === 'function') {
+              (lfEdge as any).setProperties(newProperties)
+            } else {
+              (lfEdge as any).properties = newProperties
+            }
+            
+            if (typeof (lfEdge as any).updateStyle === 'function') {
+              (lfEdge as any).updateStyle(newStyle)
+            } else {
+              (lfEdge as any).style = { ...((lfEdge as any).style || {}), ...newStyle }
+            }
+            
+            // 直接操作 DOM 确保样式生效（可选，因为 LogicFlow API 可能已经生效）
+            await nextTick()
+            // 等待更长时间确保 DOM 已更新
+            await new Promise(resolve => setTimeout(resolve, 50))
+            try {
+              const edgeId = String(selectedCanvasEdge.value.id)
+              let edgeElement: Element | null = null
+              
+              // 方法1: 通过 data-model-id
+              edgeElement = document.querySelector(`[data-model-id="${edgeId}"]`)
+              
+              // 方法2: 通过 data-id
+              if (!edgeElement) {
+                edgeElement = document.querySelector(`[data-id="${edgeId}"]`)
+              }
+              
+              // 方法3: 通过 class 和 ID 组合查找（避免使用 # 选择器，因为 ID 可能以数字开头）
+              if (!edgeElement) {
+                const allEdges = document.querySelectorAll('.lf-edge')
+                allEdges.forEach((el) => {
+                  if (el.getAttribute('data-model-id') === edgeId) {
+                    edgeElement = el
+                  }
+                })
+              }
+              
+              // 方法4: 尝试查找所有可能的边元素
+              if (!edgeElement) {
+                const allElements = document.querySelectorAll('[data-model-id], [data-id], [id]')
+                allElements.forEach((el) => {
+                  const modelId = el.getAttribute('data-model-id') || el.getAttribute('data-id') || el.getAttribute('id')
+                  if (modelId === edgeId) {
+                    edgeElement = el
+                  }
+                })
+              }
+              
+              // 方法5: 尝试通过 getElementById（如果 ID 是有效的）
+              if (!edgeElement && /^[a-zA-Z]/.test(edgeId)) {
+                edgeElement = document.getElementById(edgeId)
+              }
+              
+              if (edgeElement) {
+                const pathElements = edgeElement.querySelectorAll('path')
+                pathElements.forEach((pathElement) => {
+                  if (newStyle.strokeDasharray) {
+                    pathElement.setAttribute('stroke-dasharray', newStyle.strokeDasharray)
+                  } else {
+                    pathElement.removeAttribute('stroke-dasharray')
+                  }
+                  pathElement.setAttribute('stroke-width', String(newStyle.strokeWidth || 2))
+                  pathElement.setAttribute('stroke', newStyle.stroke || '#94a3b8')
+                })
+                
+                if (edgeElement instanceof SVGElement) {
+                  if (newStyle.strokeDasharray) {
+                    edgeElement.setAttribute('stroke-dasharray', newStyle.strokeDasharray)
+                  } else {
+                    edgeElement.removeAttribute('stroke-dasharray')
+                  }
+                  edgeElement.setAttribute('stroke-width', String(newStyle.strokeWidth || 2))
+                  edgeElement.setAttribute('stroke', newStyle.stroke || '#94a3b8')
+                }
+              }
+              // 移除警告，因为 LogicFlow API 可能已经生效，DOM 操作只是额外的保障
+            } catch (error) {
+              // 静默处理错误，不影响功能
+              // console.debug('Failed to update edge DOM in updateEdgeProperties (non-critical):', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to update edge style in LogicFlow:', error)
+      }
+    }
+    
+    // 保存画布布局
+    await saveCanvasLayout()
+    
     toastStore.success(t('applications.updateRelationshipSuccess'))
     await loadRelationships()
   } catch (error: any) {
@@ -1741,7 +2730,29 @@ const deleteSelectedEdge = () => {
   showConfirmModal.value = true
 }
 
-const handleCanvasEdgeAdded = async (edge: CanvasEdgeData) => {
+const handleCanvasEdgeAdded = async (edge: CanvasEdgeData & { _isAdjusting?: boolean }) => {
+  // 如果是锚点调整，只更新边的source/target，不创建新关系
+  if (edge._isAdjusting && edge.id) {
+    const edgeIndex = canvasEdges.value.findIndex(e => e.id === edge.id)
+    if (edgeIndex >= 0) {
+      // 保留所有样式属性
+      canvasEdges.value[edgeIndex] = {
+        ...canvasEdges.value[edgeIndex],
+        source: edge.source,
+        target: edge.target,
+        // 保留样式属性
+        edgeType: canvasEdges.value[edgeIndex].edgeType || 'polyline',
+        strokeDasharray: canvasEdges.value[edgeIndex].strokeDasharray || '',
+        strokeWidth: canvasEdges.value[edgeIndex].strokeWidth || 2,
+        stroke: canvasEdges.value[edgeIndex].stroke || '#94a3b8',
+      }
+      canvasEdges.value = [...canvasEdges.value]
+      // 自动保存布局
+      await saveCanvasLayout()
+    }
+    return
+  }
+
   const appId = parseInt(route.params.id as string)
   const sourceId = Number(edge.source)
   const targetId = Number(edge.target)
@@ -1777,20 +2788,58 @@ const handleCanvasEdgeAdded = async (edge: CanvasEdgeData) => {
   }
 
   try {
-    await applicationsApi.createRelationship(appId, {
+    const response = await applicationsApi.createRelationship(appId, {
       from_host_id: sourceId,
       to_host_id: targetId,
       relationship_type: 'member'
     })
     toastStore.success(t('applications.addRelationshipSuccess'))
-    await loadApplication()
+    
+    // 更新本地状态：添加关系
+    const newRelationship = response.data || { id: edge.id, from_host_id: sourceId, to_host_id: targetId, relationship_type: 'member' }
+    relationships.value.push(newRelationship)
+    
+    // 更新画布边：如果边已存在则更新，否则添加
+    const existingEdgeIndex = canvasEdges.value.findIndex(e => e.id === edge.id || (e.source === edge.source && e.target === edge.target))
+    if (existingEdgeIndex >= 0) {
+      // 更新已存在的边，保留所有样式属性
+      canvasEdges.value[existingEdgeIndex] = {
+        ...canvasEdges.value[existingEdgeIndex],
+        id: String(newRelationship.id),
+        relationshipType: newRelationship.relationship_type,
+        label: getRelationshipLabel(newRelationship.relationship_type),
+        description: newRelationship.description || '',
+        // 保留样式属性
+        edgeType: canvasEdges.value[existingEdgeIndex].edgeType || 'polyline',
+        strokeDasharray: canvasEdges.value[existingEdgeIndex].strokeDasharray || '',
+        strokeWidth: canvasEdges.value[existingEdgeIndex].strokeWidth || 2,
+        stroke: canvasEdges.value[existingEdgeIndex].stroke || '#94a3b8',
+        data: { ...(canvasEdges.value[existingEdgeIndex].data || {}), relationship: newRelationship }
+      }
+      canvasEdges.value = [...canvasEdges.value]
+    } else {
+      // 添加新边，设置默认样式属性
+      const newEdge: CanvasEdgeData = {
+        id: String(newRelationship.id),
+        source: String(sourceId),
+        target: String(targetId),
+        relationshipType: newRelationship.relationship_type || 'member',
+        label: getRelationshipLabel(newRelationship.relationship_type || 'member'),
+        description: newRelationship.description || '',
+        // 设置默认样式属性
+        edgeType: edge.edgeType || 'polyline',
+        strokeDasharray: edge.strokeDasharray || '',
+        strokeWidth: edge.strokeWidth || 2,
+        stroke: edge.stroke || '#94a3b8',
+        data: { relationship: newRelationship }
+      }
+      canvasEdges.value = [...canvasEdges.value, newEdge]
+    }
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('applications.addRelationshipFailed'))
     if (edge.id && canvasRef.value) {
       suppressedEdgeRemovals.add(String(edge.id))
       canvasRef.value.removeEdge(edge.id)
-    } else {
-      await loadApplication()
     }
   }
 }
@@ -1816,20 +2865,24 @@ const handleCanvasEdgeRemoved = async (edge: CanvasEdgeData) => {
     const appId = parseInt(route.params.id as string)
     await applicationsApi.deleteRelationship(appId, relationshipId)
     toastStore.success(t('applications.deleteRelationshipSuccess'))
-    await loadRelationships()
+    
+    // 更新本地状态：移除关系
+    relationships.value = relationships.value.filter(r => r.id !== relationshipId)
     canvasEdges.value = canvasEdges.value.filter((item) => Number(item.id) !== relationshipId)
     clearCanvasSelection()
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('applications.deleteRelationshipFailed'))
-    await loadApplication()
   }
 }
 
 const handleCanvasNodeRemoved = async (node: CanvasNodeData) => {
   if (!node.bindingHostId) {
+    // 删除未绑定的资源节点
     resourceNodes.value = resourceNodes.value.filter((item) => !idsEqual(item.id, node.id))
     canvasNodes.value = canvasNodes.value.filter((item) => !idsEqual(item.id, node.id))
     clearCanvasSelection()
+    // 自动保存布局
+    await saveCanvasLayout()
     return
   }
 
@@ -1846,28 +2899,51 @@ const handleCanvasNodeRemoved = async (node: CanvasNodeData) => {
   try {
     const appId = parseInt(route.params.id as string)
     await applicationsApi.removeHost(appId, hostId)
+    
+    // 更新本地状态
+    hosts.value = hosts.value.filter(h => h.id !== hostId)
     resourceNodes.value = resourceNodes.value.filter((item) => !idsEqual(item.bindingHostId, hostId))
+    canvasNodes.value = canvasNodes.value.filter(n => !idsEqual(n.bindingHostId, hostId))
+    relationships.value = relationships.value.filter(r => r.from_host_id !== hostId && r.to_host_id !== hostId)
+    canvasEdges.value = canvasEdges.value.filter(e => {
+      const sourceId = Number(e.source)
+      const targetId = Number(e.target)
+      return sourceId !== hostId && targetId !== hostId
+    })
+    await loadAvailableHosts()
+    
+    // 自动保存布局到服务端
+    await saveCanvasLayout()
+    
     toastStore.success(t('applications.removeHostSuccess'))
-    await loadApplication()
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('applications.removeHostFailed'))
-    await loadApplication()
   }
 }
 
 const addHostFromLibrary = async (hostId: number) => {
   if (!hostId) return
   hostLibraryAddingId.value = hostId
-  try {
-    const appId = parseInt(route.params.id as string)
-    await applicationsApi.addHosts(appId, [hostId])
-    toastStore.success(t('applications.addHostSuccess'))
-    await loadApplication()
-  } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('applications.addHostFailed'))
-  } finally {
+  
+  // 从 availableHosts 中获取主机信息
+  const host = availableHosts.value.find((h: any) => h.id === hostId)
+  if (!host) {
+    toastStore.error(t('applications.hostNotFound'))
     hostLibraryAddingId.value = null
+    return
   }
+  
+  // 将主机信息存储到 pendingHostsInfo 中，用于在资源选择弹窗中显示
+  // 但不真正添加到 hosts.value，只有确认资源类型后才添加
+  pendingHostsInfo.value.set(hostId, host)
+  
+  // 显示资源选择弹窗
+  await nextTick()
+  pendingResourceSelectionHosts.value = [hostId]
+  await nextTick()
+  processNextResourceSelection()
+  
+  hostLibraryAddingId.value = null
 }
 
 const startResourceBinding = (resource: ResourceDefinition, position: { x: number; y: number } | null = null) => {
@@ -1917,12 +2993,13 @@ const updateResourceNodeLabel = () => {
             label: trimmed,
             resource: true,
             resourceKey,
+            iconType: selectedCanvasNode.value.type,
           }
         }
       ]
     }
     canvasNodes.value = canvasNodes.value.map((node) =>
-      idsEqual(node.bindingHostId, hostId) ? { ...node, label: trimmed } : node
+      idsEqual(node.bindingHostId, hostId) ? { ...node, label: trimmed, x: node.x, y: node.y } : node
     )
   } else {
     resourceNodes.value = resourceNodes.value.map((node) =>
@@ -1933,7 +3010,7 @@ const updateResourceNodeLabel = () => {
     resourceNodes.value = [...resourceNodes.value]
     canvasNodes.value = canvasNodes.value.map((node) =>
       idsEqual(node.id, selectedCanvasNode.value?.id)
-        ? { ...node, label: trimmed, data: { ...(node.data || {}), label: trimmed } }
+        ? { ...node, label: trimmed, x: node.x, y: node.y, data: { ...(node.data || {}), label: trimmed } }
         : node
     )
   }
@@ -1943,6 +3020,18 @@ const updateResourceNodeLabel = () => {
     label: trimmed
   }
   resourceLabel.value = trimmed
+  saveCanvasLayout()
+}
+
+// 防抖保存函数
+let saveColorTimeout: ReturnType<typeof setTimeout> | null = null
+const debouncedSaveCanvasLayout = () => {
+  if (saveColorTimeout) {
+    clearTimeout(saveColorTimeout)
+  }
+  saveColorTimeout = setTimeout(() => {
+    saveCanvasLayout()
+  }, 500) // 500ms 防抖
 }
 
 const updateSelectedNodeColor = (color: string) => {
@@ -1953,14 +3042,21 @@ const updateSelectedNodeColor = (color: string) => {
     const hostId = node.bindingHostId
     const index = resourceNodes.value.findIndex((overlay) => overlay.bindingHostId === hostId)
     if (index >= 0) {
+      const existingIconType = resourceNodes.value[index].icon || resourceNodes.value[index].data?.iconType || node.icon || node.data?.iconType
       resourceNodes.value[index] = {
         ...resourceNodes.value[index],
         color,
-        data: { ...(resourceNodes.value[index].data || {}), color }
+        data: { 
+          ...(resourceNodes.value[index].data || {}), 
+          color,
+          customColor: color,
+          iconType: existingIconType
+        }
       }
       resourceNodes.value = [...resourceNodes.value]
     } else {
       const resourceKey = (node.data?.resourceKey as string) || node.type
+      const existingIconType = node.icon || node.data?.iconType || node.type
       resourceNodes.value = [
         ...resourceNodes.value,
         {
@@ -1970,25 +3066,67 @@ const updateSelectedNodeColor = (color: string) => {
           y: node.y,
           label: node.label,
           color,
-          icon: node.type,
+          icon: existingIconType,
           bindingHostId: hostId,
           status: node.status,
-          data: { ...(node.data || {}), color, resource: true, resourceKey }
+          data: { ...(node.data || {}), color, customColor: color, resource: true, resourceKey, iconType: existingIconType }
         }
       ]
       resourceNodes.value = [...resourceNodes.value]
     }
-    canvasNodes.value = canvasNodes.value.map((existing) =>
-      idsEqual(existing.bindingHostId, hostId) ? { ...existing, color } : existing
-    )
+    canvasNodes.value = canvasNodes.value.map((existing) => {
+      if (idsEqual(existing.bindingHostId, hostId)) {
+        const existingIconType = existing.icon || existing.data?.iconType
+        return { 
+          ...existing, 
+          color,
+          x: existing.x,
+          y: existing.y,
+          data: {
+            ...(existing.data || {}),
+            color,
+            customColor: color,
+            iconType: existingIconType
+          }
+        }
+      }
+      return existing
+    })
   } else {
     const nodeId = node.id
-    canvasNodes.value = canvasNodes.value.map((existing) =>
-      idsEqual(existing.id, nodeId) ? { ...existing, color } : existing
-    )
-    resourceNodes.value = resourceNodes.value.map((existing) =>
-      idsEqual(existing.id, nodeId) ? { ...existing, color, data: { ...(existing.data || {}), color } } : existing
-    )
+    const existingIconType = node.icon || node.data?.iconType
+    canvasNodes.value = canvasNodes.value.map((existing) => {
+      if (idsEqual(existing.id, nodeId)) {
+        return {
+          ...existing,
+          color,
+          x: existing.x,
+          y: existing.y,
+          data: {
+            ...(existing.data || {}),
+            color,
+            customColor: color,
+            iconType: existingIconType
+          }
+        }
+      }
+      return existing
+    })
+    resourceNodes.value = resourceNodes.value.map((existing) => {
+      if (idsEqual(existing.id, nodeId)) {
+        return {
+          ...existing,
+          color,
+          data: { 
+            ...(existing.data || {}), 
+            color,
+            customColor: color,
+            iconType: existingIconType
+          }
+        }
+      }
+      return existing
+    })
     resourceNodes.value = [...resourceNodes.value]
   }
 
@@ -1996,6 +3134,9 @@ const updateSelectedNodeColor = (color: string) => {
     ...selectedCanvasNode.value,
     color
   }
+
+  // 自动保存到服务端
+  debouncedSaveCanvasLayout()
 }
 
 const duplicateSelectedResource = () => {
@@ -2013,7 +3154,8 @@ const duplicateSelectedResource = () => {
     bindingHostId: undefined,
     x: (source.x ?? node.x) + 48,
     y: (source.y ?? node.y) + 48,
-    data: { ...(source.data || {}), resource: true }
+    icon: source.icon || source.type,
+    data: { ...(source.data || {}), resource: true, iconType: source.icon || source.type }
   }
 
   resourceNodes.value = [...resourceNodes.value, clone]
@@ -2025,7 +3167,7 @@ const duplicateSelectedResource = () => {
 }
 
 const exportCanvasAsImage = async () => {
-  if (!logicFlowInstance.value) {
+  if (!logicFlowInstance.value || !canvasRef.value) {
     toastStore.error(t('applications.canvasExportImageFailed'))
     return
   }
@@ -2033,6 +3175,7 @@ const exportCanvasAsImage = async () => {
   const appId = parseInt(route.params.id as string)
 
   try {
+    // 方法1: 尝试使用 LogicFlow 的 snapshot 方法
     let snapshot: any
     if (typeof logicFlowInstance.value.getSnapshot === 'function') {
       snapshot = logicFlowInstance.value.getSnapshot()
@@ -2046,21 +3189,104 @@ const exportCanvasAsImage = async () => {
       }
     }
 
-    if (!snapshot) {
-      throw new Error('snapshot unsupported')
-    }
+    let dataUrl: string | null = null
 
-    let dataUrl: string
+    // 如果 snapshot 方法可用，使用它
+    if (snapshot) {
     if (snapshot instanceof Blob) {
       dataUrl = URL.createObjectURL(snapshot)
     } else if (typeof snapshot === 'string' && snapshot.startsWith('data:')) {
       dataUrl = snapshot
     } else if (typeof snapshot === 'string') {
       dataUrl = `data:image/png;base64,${snapshot}`
-    } else {
-      throw new Error('invalid snapshot response')
+      }
     }
 
+    // 方法2: 如果 snapshot 不可用，使用 SVG 转 PNG
+    if (!dataUrl) {
+      // 查找 canvas 容器
+      const canvasContainer = document.querySelector('.application-canvas__wrapper') || 
+                              canvasRef.value?.$el?.querySelector('.application-canvas__wrapper')
+      if (!canvasContainer) {
+        throw new Error('Canvas wrapper not found')
+      }
+
+      // 查找 SVG 元素
+      const svgElement = canvasContainer.querySelector('svg')
+      if (!svgElement) {
+        throw new Error('SVG element not found')
+      }
+
+      // 获取 SVG 的尺寸
+      const bbox = svgElement.getBBox()
+      const width = bbox.width || svgElement.clientWidth || 800
+      const height = bbox.height || svgElement.clientHeight || 600
+
+      // 克隆 SVG 元素以避免修改原始元素
+      const clonedSvg = svgElement.cloneNode(true) as SVGElement
+      
+      // 设置 SVG 的 viewBox 和尺寸
+      if (!clonedSvg.getAttribute('viewBox')) {
+        clonedSvg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${width} ${height}`)
+      }
+      clonedSvg.setAttribute('width', String(width))
+      clonedSvg.setAttribute('height', String(height))
+      clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+
+      // 获取 SVG 的字符串表示
+      const svgData = new XMLSerializer().serializeToString(clonedSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      // 创建 Image 对象加载 SVG
+      const img = new Image()
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        URL.revokeObjectURL(svgUrl)
+        throw new Error('Canvas context not available')
+      }
+
+      // 等待图片加载
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          try {
+            // 设置 canvas 尺寸（添加一些边距）
+            const padding = 20
+            canvas.width = width + padding * 2
+            canvas.height = height + padding * 2
+
+            // 填充白色背景
+            ctx.fillStyle = 'white'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+            // 绘制 SVG 图片
+            ctx.drawImage(img, padding, padding, width, height)
+
+            URL.revokeObjectURL(svgUrl)
+            resolve()
+          } catch (error) {
+            URL.revokeObjectURL(svgUrl)
+            reject(error)
+          }
+        }
+        img.onerror = () => {
+          URL.revokeObjectURL(svgUrl)
+          reject(new Error('Failed to load SVG image'))
+        }
+        img.src = svgUrl
+      })
+
+      // 转换为 PNG data URL
+      dataUrl = canvas.toDataURL('image/png')
+    }
+
+    if (!dataUrl) {
+      throw new Error('Failed to generate image')
+    }
+
+    // 下载图片
     const link = document.createElement('a')
     link.href = dataUrl
     link.download = appId ? `application-${appId}-graph.png` : 'application-graph.png'
@@ -2068,9 +3294,12 @@ const exportCanvasAsImage = async () => {
     link.click()
     document.body.removeChild(link)
 
-    if (snapshot instanceof Blob) {
+    // 清理
+    if (snapshot instanceof Blob && dataUrl.startsWith('blob:')) {
       URL.revokeObjectURL(dataUrl)
     }
+
+    toastStore.success(t('applications.canvasExportImageSuccess'))
   } catch (error) {
     console.error('Failed to export PNG', error)
     toastStore.error(t('applications.canvasExportImageFailed'))
@@ -2083,23 +3312,35 @@ const applyResourceOverlay = (
   position: { x: number; y: number } | null,
   overridePosition = false
 ) => {
+  // 获取主机信息
+  const hostRecord = hosts.value.find(h => h.id === hostId)
+  if (!hostRecord) {
+    console.warn(`Host ${hostId} not found`)
+    return
+  }
+
   const defaultPosition = position || computeInitialPosition(canvasNodes.value.length)
+  // label 使用主机名，而不是资源类型的名称
+  const nodeLabel = hostRecord.hostname || hostRecord.ip || resource.label || `#${hostId}`
   let overlayNode: CanvasNodeData = {
     id: generateNodeId(resource.key),
     type: resource.type,
     x: defaultPosition.x,
     y: defaultPosition.y,
-    label: resource.label,
+    label: nodeLabel,
     color: resource.color,
     icon: resource.type,
     bindingHostId: hostId,
-    status: resource.description,
+    status: getStatusLabel(hostRecord),
     data: {
+      ...hostRecord,
       resource: true,
       resourceKey: resource.key,
       displayStatus: resource.description,
-      label: resource.label,
-      color: resource.color
+      label: nodeLabel,
+      color: resource.color,
+      customColor: resource.color,
+      iconType: resource.type
     }
   }
 
@@ -2113,34 +3354,66 @@ const applyResourceOverlay = (
         ...overlayNode,
         x: targetX,
         y: targetY,
-        status: getStatusLabel(node.data || {})
+        status: getStatusLabel(hostRecord)
       }
+      // 保持原始 icon，但更新资源类型信息
+      const originalIcon = node.icon || node.data?.iconType || resource.type
+      // label 使用主机名，而不是资源类型的名称
+      const nodeLabel = hostRecord.hostname || hostRecord.ip || node.label || resource.label || `#${hostId}`
       return {
         ...node,
         type: resource.type,
-        label: resource.label,
-        icon: resource.type,
+        label: nodeLabel,
+        icon: originalIcon, // 保持原始 icon
         color: resource.color,
         x: targetX,
         y: targetY,
         data: {
+          ...hostRecord,
           ...(node.data || {}),
           resource: true,
           resourceKey: resource.key,
           displayStatus: resource.description,
-          label: resource.label,
-          color: resource.color
+          label: nodeLabel,
+          color: resource.color,
+          customColor: resource.color,
+          iconType: originalIcon // 保持原始 icon
         }
       }
     }
     return node
   })
 
+  // 如果主机节点不存在，需要先创建主机节点
   if (!hostFound) {
+    // label 使用主机名，而不是资源类型的名称
+    const nodeLabel = hostRecord.hostname || hostRecord.ip || resource.label || `#${hostId}`
+    const hostNode: CanvasNodeData = {
+      id: hostId,
+      type: resource.type,
+      x: defaultPosition.x,
+      y: defaultPosition.y,
+      label: nodeLabel,
+      icon: resource.type,
+      color: resource.color,
+      bindingHostId: hostId,
+      status: getStatusLabel(hostRecord),
+      data: {
+        ...hostRecord,
+        resource: true,
+        resourceKey: resource.key,
+        displayStatus: resource.description,
+        label: nodeLabel,
+        color: resource.color,
+        customColor: resource.color,
+        iconType: resource.type
+      }
+    }
     canvasNodes.value = [
       ...canvasNodes.value,
-      overlayNode
+      hostNode
     ]
+    overlayNode = hostNode
   } else {
     canvasNodes.value = [...canvasNodes.value]
   }
@@ -2151,11 +3424,27 @@ const applyResourceOverlay = (
   ]
   resourceNodes.value = [...resourceNodes.value]
 
+  // 确保选中节点包含完整信息
   const selected = canvasNodes.value.find((node) => idsEqual(node.bindingHostId, hostId)) || overlayNode
-  selectedCanvasNode.value = selected
-  selectedCanvasEdge.value = null
+  selectedCanvasNode.value = {
+    ...selected,
+    data: {
+      ...hostRecord,
+      ...(selected.data || {}),
+      resource: true,
+      resourceKey: resource.key,
+      displayStatus: resource.description,
+      label: resource.label,
+      color: resource.color,
+      customColor: resource.color,
+      iconType: resource.type
+    }
+  }
+  
+  // 更新属性面板的绑定主机ID和资源标签
   nodeBindingHostId.value = String(hostId)
   resourceLabel.value = overlayNode.label
+  selectedCanvasEdge.value = null
   refreshSelections()
 }
 
@@ -2216,7 +3505,13 @@ const sanitizeNodeForPersist = (node: CanvasNodeData) => ({
     node.bindingHostId !== undefined && node.bindingHostId !== null
       ? Number(node.bindingHostId)
       : undefined,
-  data: node.data || {}
+  data: {
+    ...(node.data || {}),
+    // 确保保存图标类型和颜色
+    iconType: node.icon || node.data?.iconType,
+    customColor: node.color || node.data?.customColor || node.data?.color,
+    color: node.color || node.data?.customColor || node.data?.color
+  }
 })
 
 const sanitizeEdgeForPersist = (edge: CanvasEdgeData) => ({
@@ -2226,17 +3521,74 @@ const sanitizeEdgeForPersist = (edge: CanvasEdgeData) => ({
   relationshipType: edge.relationshipType,
   label: edge.label,
   description: edge.description,
+  edgeType: edge.edgeType,
+  strokeDasharray: edge.strokeDasharray,
+  strokeWidth: edge.strokeWidth,
+  stroke: edge.stroke,
   data: edge.data || {}
 })
 
-const serializeGraph = () => ({
+const serializeGraph = () => {
+  // 在保存之前，从 LogicFlow 同步所有节点的最新位置
+  if (logicFlowInstance.value) {
+    canvasNodes.value.forEach((node) => {
+      try {
+        const lfNode = logicFlowInstance.value.getNodeModelById(String(node.id))
+        if (lfNode) {
+          node.x = lfNode.x
+          node.y = lfNode.y
+        }
+      } catch (error) {
+        // 如果节点不存在或获取失败，使用原有位置
+        console.warn(`Failed to sync position for node ${node.id}:`, error)
+      }
+    })
+    
+    // 同步 resourceNodes 的位置
+    resourceNodes.value.forEach((node) => {
+      try {
+        const lfNode = logicFlowInstance.value.getNodeModelById(String(node.id))
+        if (lfNode) {
+          node.x = lfNode.x
+          node.y = lfNode.y
+        }
+      } catch (error) {
+        // 如果节点不存在或获取失败，使用原有位置
+        console.warn(`Failed to sync position for resource node ${node.id}:`, error)
+      }
+    })
+    
+    // 同步所有边的样式（从 LogicFlow 获取最新的样式）
+    canvasEdges.value.forEach((edge) => {
+      if (edge.id) {
+        try {
+          const lfEdge = logicFlowInstance.value.getEdgeModelById(String(edge.id))
+          if (lfEdge) {
+            const properties = lfEdge.properties || {}
+            const style = lfEdge.style || {}
+            // 从 LogicFlow 同步样式到 canvasEdges
+            edge.edgeType = properties.edgeType || lfEdge.type || edge.edgeType || 'polyline'
+            edge.strokeDasharray = style.strokeDasharray || properties.strokeDasharray || edge.strokeDasharray || ''
+            edge.strokeWidth = style.strokeWidth || properties.strokeWidth || edge.strokeWidth || 2
+            edge.stroke = style.stroke || properties.stroke || edge.stroke || '#94a3b8'
+          }
+        } catch (error) {
+          // 如果边不存在或获取失败，使用原有样式
+          console.warn(`Failed to sync style for edge ${edge.id}:`, error)
+        }
+      }
+    })
+  }
+  
+  return {
   nodes: canvasNodes.value.map(sanitizeNodeForPersist),
   edges: canvasEdges.value.map(sanitizeEdgeForPersist),
   resourceNodes: resourceNodes.value.map(sanitizeNodeForPersist),
   metadata: {
     layout: selectedLayout.value
   }
-})
+  }
+}
 
 const saveCanvasLayout = async () => {
   const appId = parseInt(route.params.id as string)
@@ -2283,9 +3635,32 @@ const resetPendingResource = () => {
   resourceBindingSearch.value = ''
 }
 
-const handleResourceBindingCancel = () => {
+const handleResourceBindingCancel = async () => {
   showResourceBindingModal.value = false
+  
+  // 如果取消时还有待处理的主机，清理所有待添加的主机信息
+  if (pendingResourceSelectionHosts.value.length > 0 || selectedResourceHostId.value) {
+    // 如果当前选中的主机还未添加到应用，从待添加列表中移除
+    if (selectedResourceHostId.value && pendingHostsInfo.value.has(selectedResourceHostId.value)) {
+      pendingHostsInfo.value.delete(selectedResourceHostId.value)
+    }
+    
+    // 如果还有待处理的主机，继续处理下一个
+    if (pendingResourceSelectionHosts.value.length > 0) {
+      await processNextResourceSelection()
+    } else {
+      // 如果没有待处理的主机了，清理所有状态
   resetPendingResource()
+      pendingResourceSelectionHosts.value = []
+      selectedResourceType.value = null
+      pendingHostsInfo.value.clear()
+    }
+  } else {
+    resetPendingResource()
+    pendingResourceSelectionHosts.value = []
+    selectedResourceType.value = null
+    pendingHostsInfo.value.clear()
+  }
 }
 
 const confirmResourceBinding = async () => {
@@ -2303,9 +3678,14 @@ const confirmResourceBinding = async () => {
     const appId = parseInt(route.params.id as string)
     if (!alreadyInApplication) {
       await applicationsApi.addHosts(appId, [hostId])
-      await loadApplication()
+      // 更新本地主机列表
+      await updateLocalHosts([hostId])
     }
     applyResourceOverlay(hostId, resourceDef, pendingResourcePosition.value, !alreadyInApplication)
+    
+    // 自动保存画布布局
+    await saveCanvasLayout()
+    
     toastStore.success(t('applications.resourceBindingSuccess'))
     showResourceBindingModal.value = false
     resetPendingResource()
@@ -2444,19 +3824,163 @@ const closeAddHostModal = () => {
   selectedHostIds.value = []
 }
 
+// 更新本地主机列表（从服务端获取新添加的主机信息）
+const updateLocalHosts = async (hostIds: number[]) => {
+  try {
+    const response = await hostsApi.getHosts({ per_page: 1000 })
+    const allHosts = response.data || []
+    const newHosts = allHosts.filter((h: any) => hostIds.includes(h.id))
+    // 添加新主机到 hosts.value
+    const existingHostIds = new Set(hosts.value.map(h => h.id))
+    newHosts.forEach((host: any) => {
+      if (!existingHostIds.has(host.id)) {
+        hosts.value.push(host)
+      }
+    })
+    // 更新 availableHosts
+    const hostIdsSet = new Set(hosts.value.map(h => h.id))
+    availableHosts.value = allHosts.filter((h: any) => !hostIdsSet.has(h.id))
+  } catch (error: any) {
+    console.error('Failed to update local hosts:', error)
+  }
+}
+
 const addHosts = async () => {
   if (selectedHostIds.value.length === 0) return
-  adding.value = true
+  
+  // 先保存选中的主机ID，因为 closeAddHostModal 会清空它
+  const hostIdsToAdd = [...selectedHostIds.value]
+  
+  // 关闭添加主机弹窗
+  closeAddHostModal()
+  
+  // 从 availableHosts 中获取主机信息（这些主机还未添加到应用）
+  const hostsToAdd = availableHosts.value.filter((h: any) => hostIdsToAdd.includes(h.id))
+  
+  // 将主机信息存储到 pendingHostsInfo 中，用于在资源选择弹窗中显示
+  // 但不真正添加到 hosts.value，只有确认资源类型后才添加
+  hostsToAdd.forEach((host: any) => {
+    pendingHostsInfo.value.set(host.id, host)
+  })
+  
+  // 为每个新添加的主机显示资源选择弹窗
+  if (hostIdsToAdd.length > 0) {
+    pendingResourceSelectionHosts.value = [...hostIdsToAdd]
+    await nextTick()
+    processNextResourceSelection()
+  }
+}
+
+const processNextResourceSelection = async () => {
+  if (pendingResourceSelectionHosts.value.length === 0) {
+    // 清理待添加的主机信息
+    pendingHostsInfo.value.clear()
+    return
+  }
+  
+  const hostId = pendingResourceSelectionHosts.value[0]
+  pendingResourceSelectionHosts.value = pendingResourceSelectionHosts.value.slice(1)
+  
+  // 等待一下确保数据已更新
+  await nextTick()
+  
+  // 优先从待添加的主机信息中查找，如果找不到再从已添加的主机中查找
+  let host = pendingHostsInfo.value.get(hostId) || hosts.value.find(h => h.id === hostId)
+  if (!host) {
+    // 如果找不到主机，等待一下再试一次
+    await new Promise(resolve => setTimeout(resolve, 100))
+    host = pendingHostsInfo.value.get(hostId) || hosts.value.find(h => h.id === hostId)
+    if (!host) {
+      // 如果还是找不到主机，继续处理下一个
+      await processNextResourceSelection()
+      return
+    }
+  }
+  
+  // 显示资源选择弹窗（添加主机后选择资源类型）
+  selectedResourceHostId.value = hostId
+  pendingResourceDefinition.value = null
+  pendingResourcePosition.value = null
+  resourceBindingSearch.value = ''
+  selectedResourceType.value = null
+  showResourceBindingModal.value = true
+}
+
+const handleResourceSelected = (resource: ResourceDefinition) => {
+  if (!selectedResourceHostId.value) return
+  
+  // 只保存选中的资源类型，不立即执行
+  selectedResourceType.value = resource.key
+}
+
+const confirmResourceTypeSelection = async () => {
+  if (!selectedResourceHostId.value || !selectedResourceType.value) {
+    toastStore.error(t('applications.resourceBindingSelectNotice'))
+    return
+  }
+  
+  const hostId = selectedResourceHostId.value
+  const resourceKey = selectedResourceType.value
+  const resource = resourceLibrary.value.find(r => r.key === resourceKey)
+  
+  if (!resource) {
+    toastStore.error(t('applications.resourceNotFound'))
+    return
+  }
+  
+  // 检查主机是否已在应用中
+  const alreadyInApplication = hosts.value.some(h => h.id === hostId)
+  
+  bindingResource.value = true
   try {
     const appId = parseInt(route.params.id as string)
-    await applicationsApi.addHosts(appId, selectedHostIds.value)
+    
+    // 如果主机还未添加到应用，先添加主机
+    if (!alreadyInApplication) {
+      await applicationsApi.addHosts(appId, [hostId])
     toastStore.success(t('applications.addHostSuccess'))
-    closeAddHostModal()
-    loadApplication()
+      // 更新本地主机列表
+      await updateLocalHosts([hostId])
+      // 从待添加列表中移除（因为已经真正添加了）
+      pendingHostsInfo.value.delete(hostId)
+      // 等待主机信息更新
+      await nextTick()
+    }
+    
+    // 确保主机信息已加载（优先从已添加的主机中查找，如果找不到再从待添加的主机中查找）
+    let hostRecord = hosts.value.find(h => h.id === hostId)
+    if (!hostRecord) {
+      hostRecord = pendingHostsInfo.value.get(hostId)
+    }
+    if (!hostRecord) {
+      toastStore.error(t('applications.hostNotFound'))
+      return
+    }
+    
+    // 计算位置
+    const hostNode = canvasNodes.value.find(n => n.bindingHostId === hostId)
+    const position = hostNode ? { x: hostNode.x, y: hostNode.y } : computeInitialPosition(canvasNodes.value.length)
+    
+    // 应用资源类型
+    applyResourceOverlay(hostId, resource, position, !alreadyInApplication)
+    
+    // 等待画布更新
+    await nextTick()
+    
+    // 自动保存画布布局
+    await saveCanvasLayout()
+    
+    toastStore.success(t('applications.resourceBindingSuccess'))
+    showResourceBindingModal.value = false
+    selectedResourceHostId.value = null
+    selectedResourceType.value = null
+    
+    // 处理下一个主机的资源选择
+    await processNextResourceSelection()
   } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('applications.addHostFailed'))
+    toastStore.error(error.response?.data?.message || t('applications.resourceBindingFailed'))
   } finally {
-    adding.value = false
+    bindingResource.value = false
   }
 }
 
@@ -2466,9 +3990,28 @@ const removeHost = async (hostId: number) => {
     try {
       const appId = parseInt(route.params.id as string)
       await applicationsApi.removeHost(appId, hostId)
-      toastStore.success(t('applications.removeHostSuccess'))
-      await loadApplication()
+      
+      // 更新本地状态：从 hosts 中移除
+      hosts.value = hosts.value.filter(h => h.id !== hostId)
+      // 从画布节点中移除
+      canvasNodes.value = canvasNodes.value.filter(n => !idsEqual(n.bindingHostId, hostId))
+      // 从资源节点中移除
+      resourceNodes.value = resourceNodes.value.filter(n => !idsEqual(n.bindingHostId, hostId))
+      // 从关系中移除
+      relationships.value = relationships.value.filter(r => r.from_host_id !== hostId && r.to_host_id !== hostId)
+      canvasEdges.value = canvasEdges.value.filter(e => {
+        const sourceId = Number(e.source)
+        const targetId = Number(e.target)
+        return sourceId !== hostId && targetId !== hostId
+      })
+      // 更新可用主机列表
+      await loadAvailableHosts()
+      
+      // 自动保存布局到服务端
+      await saveCanvasLayout()
+      
       clearCanvasSelection()
+      toastStore.success(t('applications.removeHostSuccess'))
     } catch (error: any) {
       toastStore.error(error.response?.data?.message || t('applications.removeHostFailed'))
     }
@@ -2495,14 +4038,32 @@ const addRelationship = async () => {
   try {
     const appId = parseInt(route.params.id as string)
     if (editingRelationshipId.value) {
-      await applicationsApi.updateRelationship(appId, editingRelationshipId.value, relationshipForm.value as Partial<HostRelationship>)
+      const response = await applicationsApi.updateRelationship(appId, editingRelationshipId.value, relationshipForm.value as Partial<HostRelationship>)
       toastStore.success(t('applications.updateRelationshipSuccess'))
+      
+      // 更新本地状态
+      const updatedRelationship = response.data
+      if (updatedRelationship) {
+        const index = relationships.value.findIndex(r => r.id === editingRelationshipId.value)
+        if (index >= 0) {
+          relationships.value[index] = updatedRelationship
+        }
+        // 同步边数据
+        syncCanvasEdgesFromRelationships()
+      }
     } else {
-    await applicationsApi.createRelationship(appId, relationshipForm.value as HostRelationship)
+      const response = await applicationsApi.createRelationship(appId, relationshipForm.value as HostRelationship)
     toastStore.success(t('applications.addRelationshipSuccess'))
+      
+      // 更新本地状态
+      const newRelationship = response.data
+      if (newRelationship) {
+        relationships.value.push(newRelationship)
+        // 同步边数据（确保所有关系都有对应的边）
+        syncCanvasEdgesFromRelationships()
+      }
     }
     closeAddRelationshipModal()
-    await loadApplication()
   } catch (error: any) {
     const messageKey = editingRelationshipId.value ? 'applications.updateRelationshipFailed' : 'applications.addRelationshipFailed'
     toastStore.error(error.response?.data?.message || t(messageKey))
@@ -2535,7 +4096,10 @@ const deleteRelationship = (relationship: any) => {
       const appId = parseInt(route.params.id as string)
       await applicationsApi.deleteRelationship(appId, relationship.id)
       toastStore.success(t('applications.deleteRelationshipSuccess'))
-      await loadApplication()
+      
+      // 更新本地状态
+      relationships.value = relationships.value.filter(r => r.id !== relationship.id)
+      canvasEdges.value = canvasEdges.value.filter(e => Number(e.id) !== relationship.id)
     } catch (error: any) {
       toastStore.error(error.response?.data?.message || t('applications.deleteRelationshipFailed'))
     }
@@ -2560,8 +4124,17 @@ watch(isCanvasFullscreen, (fullscreen) => {
   }
 })
 
+// 点击外部关闭样式菜单
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (showEdgeStyleMenu.value && !target.closest('.edge-style-menu-container')) {
+    showEdgeStyleMenu.value = false
+  }
+}
+
 onMounted(() => {
   loadApplication()
+  document.addEventListener('click', handleClickOutside)
 })
 
 watch(showAddHostModal, (opened) => {
@@ -2579,6 +4152,7 @@ watch(showResourceBindingModal, (opened) => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
   document.body.classList.remove('overflow-hidden')
   window.removeEventListener('keydown', onFullscreenKeydown)
 })

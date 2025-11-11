@@ -47,6 +47,23 @@ export interface CanvasNodeData {
   data?: Record<string, any>
 }
 
+export enum EdgeType {
+  POLYLINE = 'polyline',
+  LINE = 'line',
+  BEZIER = 'bezier',
+}
+
+export enum EdgeStyle {
+  SOLID = 'solid',
+  DASHED = 'dashed',
+}
+
+export enum EdgeWidth {
+  THIN = 'thin',
+  MEDIUM = 'medium',
+  THICK = 'thick',
+}
+
 export interface CanvasEdgeData {
   id?: string | number
   source: string | number
@@ -54,6 +71,11 @@ export interface CanvasEdgeData {
   relationshipType?: string
   label?: string
   description?: string
+  // Edge style properties
+  edgeType?: EdgeType | string
+  strokeDasharray?: string
+  strokeWidth?: number | EdgeWidth
+  stroke?: string
   data?: Record<string, any>
 }
 
