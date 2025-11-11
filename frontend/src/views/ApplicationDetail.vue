@@ -433,6 +433,23 @@
                     <!-- Edge Color -->
                     <div>
                       <label class="block text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">{{ $t('applications.edgeColor') }}</label>
+                      <!-- 预设颜色（圆形展示） -->
+                      <div class="mb-3 flex items-center gap-2 flex-wrap">
+                        <button
+                          v-for="color in presetColors"
+                          :key="color"
+                          @click="applyEdgeStyle({ stroke: color })"
+                          :class="[
+                            'h-8 w-8 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1',
+                            edgeForm.stroke === color 
+                              ? 'border-purple-600 ring-2 ring-purple-500 ring-offset-1 shadow-md' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          ]"
+                          :style="{ backgroundColor: color }"
+                          :title="color"
+                        />
+                      </div>
+                      <!-- 自定义颜色选择器 -->
                       <div class="flex items-center gap-3">
                         <input
                           type="color"
@@ -445,7 +462,7 @@
                           :value="edgeForm.stroke"
                           @input="applyEdgeStyle({ stroke: ($event.target as HTMLInputElement).value })"
                           class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all"
-                          placeholder="#94a3b8"
+                          placeholder="#000000"
                         />
                       </div>
                     </div>
@@ -1106,6 +1123,17 @@ const edgeForm = reactive({
   strokeWidth: 2,
   stroke: '#94a3b8'
 })
+// 预设的常用颜色（黑色作为默认开头）
+const presetColors = [
+  '#000000', // 黑色（默认）
+  '#3b82f6', // 蓝色
+  '#10b981', // 绿色
+  '#ef4444', // 红色
+  '#f59e0b', // 橙色
+  '#8b5cf6', // 紫色
+  '#94a3b8', // 灰色
+  '#06b6d4', // 青色
+]
 const updatingEdge = ref(false)
 const suppressedEdgeRemovals = new Set<string>()
 const hostLibraryKeyword = ref('')
