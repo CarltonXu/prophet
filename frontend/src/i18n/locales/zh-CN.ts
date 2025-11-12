@@ -46,6 +46,7 @@ export default {
     yes: '是',
     no: '否',
     selectAll: '全选',
+    deselectAll: '取消全选',
     batchOperation: '批量操作',
     completed: '已完成',
     running: '运行中',

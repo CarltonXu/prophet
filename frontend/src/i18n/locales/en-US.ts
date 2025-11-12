@@ -46,6 +46,7 @@ export default {
     yes: 'Yes',
     no: 'No',
     selectAll: 'Select All',
+    deselectAll: 'Deselect All',
     batchOperation: 'Batch Operation',
     completed: 'Completed',
     running: 'Running',

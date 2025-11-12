@@ -56,13 +56,13 @@
               
               <!-- Input or Value Selector -->
               <div class="flex-1 ml-2 min-w-0">
-          <input
+                <input
                   v-if="searchField === 'all' || searchField !== 'tag'"
-            v-model="searchQuery"
-            type="text"
+                  v-model="searchQuery"
+                  type="text"
                   :placeholder="getSearchPlaceholder()"
                   class="w-full border-0 p-0 text-sm focus:outline-none focus:ring-0"
-            @input="debouncedSearch"
+                  @input="debouncedSearch"
                   @keyup.enter="loadHosts(1)"
                   @focus="handleInputFocus"
                   @keydown.escape="showFieldDropdown = false; showValueDropdown = false"
@@ -227,30 +227,51 @@
           
           <!-- Column Customization -->
           <Menu as="div" class="relative inline-block text-left">
-            <MenuButton class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <Squares2X2Icon class="h-5 w-5 mr-2" />
-              {{ $t('hosts.customizeColumns') }}
+            <MenuButton class="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+              <Bars3BottomLeftIcon class="h-5 w-5" />
             </MenuButton>
-            <MenuItems class="absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none max-h-96 overflow-y-auto">
-              <div class="py-2">
-                <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-200">
-                  {{ $t('hosts.selectColumns') }}
+            <MenuItems class="absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
+              <!-- Header -->
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <Bars3BottomLeftIcon class="h-4 w-4 text-blue-600" />
+                    <span class="text-sm font-semibold text-gray-900">{{ $t('hosts.selectColumns') }}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      @click.stop="selectAllColumns"
+                      class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                    >
+                      {{ $t('common.selectAll') }}
+                    </button>
+                    <span class="text-gray-300">•</span>
+                    <button
+                      @click.stop="deselectAllColumns"
+                      class="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      {{ $t('common.deselectAll') }}
+                    </button>
+                  </div>
                 </div>
-                <div class="px-2 py-2">
-                  <label
-                    v-for="column in availableColumns"
-                    :key="column.key"
-                    class="flex items-center px-2 py-2 hover:bg-gray-50 rounded cursor-pointer"
-                  >
+              </div>
+              <!-- Column List -->
+              <div class="py-2 max-h-80 overflow-y-auto">
+                <label
+                  v-for="column in availableColumns"
+                  :key="column.key"
+                  class="flex items-center px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors group"
+                >
+                  <div class="relative flex items-center">
                     <input
                       type="checkbox"
                       v-model="visibleColumns"
                       :value="column.key"
-                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
+                      class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 mr-3 cursor-pointer transition-all"
                     />
-                    <span class="text-sm text-gray-700">{{ column.label }}</span>
-                  </label>
-                </div>
+                    <span class="text-sm text-gray-700 select-none group-hover:text-gray-900 font-medium transition-colors">{{ column.label }}</span>
+                  </div>
+                </label>
               </div>
             </MenuItems>
           </Menu>
@@ -1820,6 +1841,7 @@ import {
   DocumentTextIcon,
   ArrowPathIcon,
   Bars3Icon,
+  Bars3BottomLeftIcon,
   Squares2X2Icon,
   EllipsisVerticalIcon,
   ChevronDownIcon,
@@ -1945,10 +1967,20 @@ const loadVisibleColumns = (): string[] => {
 
 const visibleColumns = ref<string[]>(loadVisibleColumns())
 
-// Save to localStorage when changed
+// Save to localStorage when changed, but ensure required columns are always included
 watch(visibleColumns, (newVal) => {
   try {
-    localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(newVal))
+    // Ensure required columns are always included
+    const required = ['checkbox', 'ip', 'operation']
+    const filtered = newVal.filter(col => !required.includes(col))
+    const toSave = [...new Set([...required, ...filtered])]
+    
+    // Only save if the value actually changed (to avoid infinite loops)
+    if (JSON.stringify(toSave.sort()) !== JSON.stringify(newVal.sort())) {
+      visibleColumns.value = toSave
+    } else {
+      localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(filtered))
+    }
   } catch (e) {
     console.warn('Failed to save column preferences:', e)
   }
@@ -1973,6 +2005,20 @@ const availableColumns = computed(() => [
 
 // Helper to check if column is visible
 const isColumnVisible = (key: string) => visibleColumns.value.includes(key)
+
+// Select all columns (ensure required columns are always included)
+const selectAllColumns = () => {
+  const allColumnKeys = availableColumns.value.map(col => col.key)
+  const required = ['checkbox', 'ip', 'operation']
+  // Merge all columns with required ones, ensuring no duplicates
+  visibleColumns.value = [...new Set([...required, ...allColumnKeys])]
+}
+
+// Deselect all columns (keep only required ones)
+const deselectAllColumns = () => {
+  const required = ['checkbox', 'ip', 'operation']
+  visibleColumns.value = required
+}
 
 const searchFields = computed(() => [
   { value: 'all', label: t('hosts.searchAll') },
