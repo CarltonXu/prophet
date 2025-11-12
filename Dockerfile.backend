@@ -1,56 +1,29 @@
-# 后端 Dockerfile
-# 包含 Flask、Celery、Redis
-
 FROM python:3.11-slim
 
-# 设置工作目录
 WORKDIR /app
 
-# 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=app.py \
-    FLASK_ENV=production
+    FLASK_ENV=production 
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    make \
-    libffi-dev \
-    libssl-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     nmap \
     sshpass \
     curl \
     supervisor \
-    alien \
+    redis-server \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Redis（在容器内运行）
-# 从源码编译安装 Redis（更可靠）
-RUN curl -fsSL https://download.redis.io/redis-stable.tar.gz -o /tmp/redis.tar.gz \
-    && cd /tmp \
-    && tar xzf redis.tar.gz \
-    && cd redis-stable \
-    && make \
-    && make install \
-    && rm -rf /tmp/redis* \
-    && mkdir -p /etc/redis /var/lib/redis
-
-# 复制依赖文件
 COPY requirements.txt .
 
-# 安装 Python 依赖
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 先复制 tools 目录（用于安装 WMI 客户端）
 COPY tools/ /app/tools/
 
-# 安装 WMI 客户端（用于连接 Windows 主机）
-# 将项目中的 RPM 包转换为 DEB 并安装
-# wmic 命令用于通过 WMI 协议连接 Windows 主机进行信息采集
 RUN if [ -f /app/tools/wmi-1.3.14-4.el7.art.x86_64.rpm ]; then \
+    apt-get update && apt-get install -y --no-install-recommends alien && \
     cd /app/tools && \
     alien -d wmi-1.3.14-4.el7.art.x86_64.rpm && \
     dpkg -i wmi_*.deb || true && \
@@ -58,6 +31,7 @@ RUN if [ -f /app/tools/wmi-1.3.14-4.el7.art.x86_64.rpm ]; then \
     rm -f wmi_*.deb && \
     apt-get purge -y alien && \
     apt-get autoremove -y && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     echo "WMI client (wmic) installed successfully"; \
     else \
@@ -65,26 +39,18 @@ RUN if [ -f /app/tools/wmi-1.3.14-4.el7.art.x86_64.rpm ]; then \
     echo "wmic command may not be available for Windows host collection"; \
     fi
 
-# 复制应用代码
+RUN mkdir -p /var/lib/redis /etc/redis /app/logs /app/uploads /app/data
+
 COPY . .
 
-# 创建必要的目录
-RUN mkdir -p /app/logs /app/uploads /app/data
-
-# 复制启动脚本和 supervisor 配置
 COPY docker/backend/start.sh /start.sh
 COPY docker/backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-RUN chmod +x /start.sh && \
-    mkdir -p /app/logs
+RUN chmod +x /start.sh
 
-# 暴露端口
 EXPOSE 5000
 
-# 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:5000/api/v1/health || exit 1
 
-# 使用启动脚本启动所有服务
 CMD ["/start.sh"]
-

@@ -15,8 +15,9 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
     # Database
+    # Default to /app/data/prophet.db in container, or BASE_DIR/prophet.db for local development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        f'sqlite:///{BASE_DIR}/prophet.db'
+        f'sqlite:///{BASE_DIR / "data" / "prophet.db"}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
@@ -66,7 +67,9 @@ class Config:
     @staticmethod
     def init_app(app):
         """Initialize application with config"""
-        # Create upload folder
+        # Create necessary directories
+        data_dir = BASE_DIR / 'data'
+        os.makedirs(data_dir, exist_ok=True)
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
 
