@@ -149,42 +149,24 @@ class CollectionParserService:
         max_retries = 3
         retry_delay = 0.1  # 100ms
         
-        # Store host ID for re-querying if needed
         host_id = host.id
         
         for attempt in range(max_retries):
             try:
-                # Try to use the existing host object if it's already in the session
-                # This avoids unnecessary rollback which would undo uncommitted changes
-                use_existing_host = False
                 try:
-                    # Check if host is in the current session by trying to access its id
-                    if hasattr(host, 'id') and host.id == host_id:
-                        # Try to access an attribute to verify host is attached to session
-                        # If host is detached, this will raise an exception
-                        try:
-                            _ = host.hostname  # Access attribute to check if attached
-                            # Host is in session and attached, use it directly
-                            use_existing_host = True
-                        except Exception:
-                            # Host might be detached, need to re-query
-                            use_existing_host = False
-                except Exception:
-                    # Any error means we should re-query
-                    use_existing_host = False
-                
-                if not use_existing_host:
-                    # Rollback any previous failed transaction and re-query
-                    # This is necessary in multi-threaded environments where each thread has its own session
+                    host = db.session.merge(host)
+                    logger.debug(f"Merged host {host_id} into session")
+                except Exception as merge_error:
+                    logger.warning(f"Failed to merge host {host_id} into session: {merge_error}")
                     try:
                         db.session.rollback()
                     except Exception:
                         pass
                     
-                    # Re-query host to ensure it's in the current session
                     host = Host.query.get(host_id)
                     if not host:
                         raise ValueError(f"Host {host_id} not found")
+                    logger.warning(f"Had to re-query host {host_id} in update_host_from_parsed_data (attempt {attempt + 1})")
                 
                 basic = parsed_data.get('basic', {})
                 os_info = parsed_data.get('os', {})
@@ -215,17 +197,23 @@ class CollectionParserService:
                 # Update CPU information
                 if cpu_info.get('cpu_info'):
                     host.cpu_info = cpu_info.get('cpu_info')
-                if cpu_info.get('cpu_cores'):
+                if cpu_info.get('cpu_cores') is not None:  # Allow 0 as valid value
                     host.cpu_cores = cpu_info.get('cpu_cores')
+                else:
+                    logger.warning(f"cpu_cores is None or missing in cpu_info: {cpu_info}")
                 
                 # Update memory information
-                if memory_info.get('total_mem'):
+                if memory_info.get('total_mem') is not None:  # Allow 0 as valid value
                     # Convert bytes to GB
                     total_mem_bytes = memory_info.get('total_mem')
                     host.memory_total = round(total_mem_bytes / (1024**3), 2) if total_mem_bytes else None
-                if memory_info.get('free_mem'):
+                else:
+                    logger.warning(f"total_mem is None or missing in memory_info: {memory_info}")
+                if memory_info.get('free_mem') is not None:  # Allow 0 as valid value
                     free_mem_bytes = memory_info.get('free_mem')
                     host.memory_free = round(free_mem_bytes / (1024**3), 2) if free_mem_bytes else None
+                else:
+                    logger.warning(f"free_mem is None or missing in memory_info: {memory_info}")
                 if memory_info.get('memory_info'):
                     host.memory_info = memory_info.get('memory_info')
                 
@@ -278,7 +266,6 @@ class CollectionParserService:
                 is_locked = 'database is locked' in error_str.lower() or 'locked' in error_str.lower()
                 
                 if is_locked and attempt < max_retries - 1:
-                    # Database locked, retry after delay
                     logger.warning(f"Database locked (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
                     db.session.rollback()
                     time.sleep(retry_delay)

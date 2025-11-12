@@ -44,6 +44,7 @@ def import_hosts_from_csv():
         
         created = []
         updated = []
+        restored = []
         errors = []
         
         for idx, row in df.iterrows():
@@ -52,11 +53,12 @@ def import_hosts_from_csv():
                 if not ip:
                     continue
                 
-                # Check if host exists
+                # Check if host exists (including deleted ones)
+                # First check for non-deleted host
                 existing = Host.query.filter_by(ip=ip, deleted_at=None).first()
                 
                 if existing:
-                    # Update existing
+                    # Update existing non-deleted host
                     if 'hostname' in df.columns:
                         existing.hostname = row.get('hostname', '') or None
                     if 'mac' in df.columns:
@@ -69,36 +71,66 @@ def import_hosts_from_csv():
                         existing.os_version = row.get('version', '') or None
                     updated.append(existing)
                 else:
-                    # Create new
-                    host = Host(
-                        ip=ip,
-                        hostname=row.get('hostname', '') or None if 'hostname' in df.columns else None,
-                        mac=row.get('mac', '') or None if 'mac' in df.columns else None,
-                        vendor=row.get('vendor', '') or None if 'vendor' in df.columns else None,
-                        os_type=row.get('os', '') or None if 'os' in df.columns else None,
-                        os_version=row.get('version', '') or None if 'version' in df.columns else None,
-                        device_type='host',
-                        is_physical=True,
-                        created_by=user_id,
-                    )
-                    db.session.add(host)
-                    created.append(host)
+                    # Check if there's a deleted host with same IP
+                    deleted_host = Host.query.filter(
+                        Host.ip == ip,
+                        Host.deleted_at.isnot(None)
+                    ).first()
+                    
+                    if deleted_host:
+                        # Restore deleted host
+                        deleted_host.deleted_at = None
+                        if 'hostname' in df.columns:
+                            deleted_host.hostname = row.get('hostname', '') or None
+                        if 'mac' in df.columns:
+                            deleted_host.mac = row.get('mac', '') or None
+                        if 'vendor' in df.columns:
+                            deleted_host.vendor = row.get('vendor', '') or None
+                        if 'os' in df.columns:
+                            deleted_host.os_type = row.get('os', '') or None
+                        if 'version' in df.columns:
+                            deleted_host.os_version = row.get('version', '') or None
+                        restored.append(deleted_host)
+                    else:
+                        # Create new host
+                        host = Host(
+                            ip=ip,
+                            hostname=row.get('hostname', '') or None if 'hostname' in df.columns else None,
+                            mac=row.get('mac', '') or None if 'mac' in df.columns else None,
+                            vendor=row.get('vendor', '') or None if 'vendor' in df.columns else None,
+                            os_type=row.get('os', '') or None if 'os' in df.columns else None,
+                            os_version=row.get('version', '') or None if 'version' in df.columns else None,
+                            device_type='host',
+                            is_physical=True,
+                            created_by=user_id,
+                        )
+                        db.session.add(host)
+                        created.append(host)
                     
             except Exception as e:
+                # Rollback this transaction to allow other rows to continue
+                db.session.rollback()
                 errors.append({
                     'row': idx + 1,
                     'ip': row.get('ip', 'unknown'),
                     'error': str(e)
                 })
+                continue
         
-        db.session.commit()
+        # Commit all successful operations
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Failed to commit changes: {str(e)}")
         
         return jsonify({
             'code': 200,
-            'message': f'Import completed: {len(created)} created, {len(updated)} updated, {len(errors)} errors',
+            'message': f'Import completed: {len(created)} created, {len(updated)} updated, {len(restored)} restored, {len(errors)} errors',
             'data': {
                 'created': len(created),
                 'updated': len(updated),
+                'restored': len(restored),
                 'errors': errors
             }
         })

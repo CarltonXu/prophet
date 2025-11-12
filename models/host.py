@@ -15,7 +15,7 @@ class Host(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column(db.String(255), index=True)
-    ip = db.Column(db.String(45), unique=True, nullable=False, index=True)
+    ip = db.Column(db.String(45), nullable=False, index=True)
     mac = db.Column(db.String(17), index=True)
     vendor = db.Column(db.String(100))
     

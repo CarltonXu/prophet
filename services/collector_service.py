@@ -320,11 +320,6 @@ class CollectorService:
                     parsed_data = parser_service.parse_collection_data(collected_data)
                     parser_service.update_host_from_parsed_data(host, parsed_data)
                     
-                    # Update collection status to completed
-                    host.collection_status = 'completed'
-                    host.last_collected_at = datetime.utcnow()
-                    
-                    # Record collection history (optional, for tracking)
                     host_detail = HostDetail(
                         host_id=host.id,
                         details='',  # No longer storing raw data

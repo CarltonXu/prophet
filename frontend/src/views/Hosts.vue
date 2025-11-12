@@ -2689,19 +2689,30 @@ const handleImport = async () => {
   try {
     const response = await importApi.importHostsFromCSV(selectedFile.value)
     importResult.value = response
-    if (response.data?.errors?.length === 0) {
-      const importResponse: any = response
-    toastStore.success(importResponse.message || t('hosts.importSuccess'))
+    
+    // Check if there are errors in the response
+    const hasErrors = response.data?.errors && response.data.errors.length > 0
+    
+    if (!hasErrors) {
+      toastStore.success(response.message || t('hosts.importSuccess'))
       setTimeout(() => {
         closeDataImportModal()
       }, 2000)
     } else {
-      const importResponse: any = response
-      toastStore.warning(importResponse.message || t('hosts.importWithErrors'))
+      // Show warning with error details
+      const errorCount = response.data.errors.length
+      const errorMessage = response.message || 
+        t('hosts.importWithErrors', { count: errorCount })
+      toastStore.warning(errorMessage)
     }
     loadHosts(1)
   } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('messages.operationFailed'))
+    // Handle error response
+    const errorMessage = error.response?.data?.message || 
+                        error.message || 
+                        t('messages.operationFailed')
+    toastStore.error(errorMessage)
+    console.error('Import error:', error)
   } finally {
     importing.value = false
   }

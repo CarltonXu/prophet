@@ -50,9 +50,9 @@ class LinuxCollector(BaseHostCollector):
         failed_dict = host_info.get("failed", {})
         unreachable_dict = host_info.get("unreachable", {})
         
-        logging.info("Success dict: %s, keys: %s" % (success_dict, list(success_dict.keys()) if success_dict else []))
-        logging.info("Failed dict: %s, keys: %s" % (failed_dict, list(failed_dict.keys()) if failed_dict else []))
-        logging.info("Unreachable dict: %s, keys: %s" % (unreachable_dict, list(unreachable_dict.keys()) if unreachable_dict else []))
+        logging.debug("Success dict: %s, keys: %s" % (success_dict, list(success_dict.keys()) if success_dict else []))
+        logging.debug("Failed dict: %s, keys: %s" % (failed_dict, list(failed_dict.keys()) if failed_dict else []))
+        logging.debug("Unreachable dict: %s, keys: %s" % (unreachable_dict, list(unreachable_dict.keys()) if unreachable_dict else []))
         
         if not success_dict or len(success_dict) == 0:
             # Check if there are failed or unreachable hosts
