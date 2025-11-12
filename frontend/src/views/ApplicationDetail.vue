@@ -207,7 +207,7 @@
       <div
         :class="[
           'bg-white shadow rounded-lg transition-all duration-200 ease-in-out',
-          isCanvasFullscreen ? 'fixed inset-0 z-50 rounded-none shadow-xl flex flex-col' : ''
+          isCanvasFullscreen ? 'fixed inset-0 z-[9999] rounded-none shadow-xl flex flex-col bg-white' : ''
         ]"
       >
         <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">

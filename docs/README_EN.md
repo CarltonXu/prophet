@@ -166,9 +166,9 @@ For more details, please refer to the [Docker Deployment Documentation](../docke
 - **Python Environment**: Python 3.8 or higher
 - **System Dependencies** (RHEL & CentOS):
   ```bash
-  yum install -y epel-release
+    yum install -y epel-release
   yum install -y nmap sshpass python3 python3-pip python3-devel
-  ```
+      ```
 
 #### Installation Steps
 

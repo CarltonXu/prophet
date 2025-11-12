@@ -347,6 +347,9 @@ class AnsibleApi:
             env['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
             # Disable SSH key checking
             env['ANSIBLE_SSH_ARGS'] = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+            # Set remote temporary directory to /tmp (more reliable than ~/.ansible/tmp)
+            # This avoids permission issues when user home directory is not writable
+            env['ANSIBLE_REMOTE_TMP'] = '/tmp/.ansible'
             logging.info(f"Executing: {' '.join(cmd)}")
             
             # Execute ansible command
@@ -400,6 +403,8 @@ class AnsibleApi:
             ]
             
             env = os.environ.copy()
+            # Set remote temporary directory to /tmp (more reliable than ~/.ansible/tmp)
+            env['ANSIBLE_REMOTE_TMP'] = '/tmp/.ansible'
             logging.info(f"Executing: {' '.join(cmd)}")
             
             result = subprocess.run(
