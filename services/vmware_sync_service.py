@@ -232,13 +232,22 @@ class VMwareSyncService:
                            esxi_summary.get('totalMemory'))
             memory_gb = memory_bytes / (1024 * 1024 * 1024) if memory_bytes else None
             
+            # Extract ESXI version for distribution field
+            esxi_version = (esxi_summary.get('fullName') or 
+                           esxi_summary.get('version') or 
+                           esxi_summary.get('productLineId'))
+            
+            exsi_product_name = (esxi_summary.get('licenseProductName') or 
+                               esxi_summary.get('productLineId'))
+            
             if host:
                 # Update existing host
                 host.hostname = esxi_name
                 if ip and ip != host.ip:
                     host.ip = ip
-                host.os_type = 'vmware'
-                host.device_type = 'host'
+                host.os_type = "VMware ESXi"
+                host.distribution = esxi_version
+                host.device_type = exsi_product_name
                 host.is_physical = False
                 host.virtualization_platform_id = self.platform.id
                 host.cpu_cores = cpu_cores
@@ -246,12 +255,18 @@ class VMwareSyncService:
                 host.updated_at = datetime.utcnow()
                 self.updated_count += 1
             else:
+                # Extract ESXI version for distribution field
+                esxi_version = (esxi_summary.get('fullName') or 
+                               esxi_summary.get('version') or 
+                               esxi_summary.get('productLineId'))
+                
                 # Create new host
                 host = Host(
                     hostname=esxi_name,
                     ip=ip,
-                    os_type='vmware',
-                    device_type='host',
+                    os_type='VMware ESXi',
+                    distribution=esxi_version,
+                    device_type=exsi_product_name,
                     is_physical=False,
                     virtualization_platform_id=self.platform.id,
                     cpu_cores=cpu_cores,

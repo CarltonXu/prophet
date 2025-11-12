@@ -225,6 +225,36 @@
             </Menu>
           </div>
           
+          <!-- Column Customization -->
+          <Menu as="div" class="relative inline-block text-left">
+            <MenuButton class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <Squares2X2Icon class="h-5 w-5 mr-2" />
+              {{ $t('hosts.customizeColumns') }}
+            </MenuButton>
+            <MenuItems class="absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none max-h-96 overflow-y-auto">
+              <div class="py-2">
+                <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-200">
+                  {{ $t('hosts.selectColumns') }}
+                </div>
+                <div class="px-2 py-2">
+                  <label
+                    v-for="column in availableColumns"
+                    :key="column.key"
+                    class="flex items-center px-2 py-2 hover:bg-gray-50 rounded cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      v-model="visibleColumns"
+                      :value="column.key"
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
+                    />
+                    <span class="text-sm text-gray-700">{{ column.label }}</span>
+                  </label>
+                </div>
+              </div>
+            </MenuItems>
+          </Menu>
+          
           <!-- More Actions Menu -->
           <Menu as="div" class="relative inline-block text-left">
             <MenuButton class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -525,7 +555,7 @@
                   <div class="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                     <span v-if="vm.os_type">{{ vm.os_type }}</span>
                     <span v-if="vm.cpu_cores">{{ vm.cpu_cores }}{{ $t('hosts.cores') }}</span>
-                    <span v-if="vm.memory_total">{{ formatBytes(vm.memory_total * 1024 * 1024, 'GB') }}</span>
+                    <span v-if="vm.memory_total">{{ formatGB(vm.memory_total) }}</span>
                   </div>
                 </div>
                 <div class="flex items-center space-x-1">
@@ -568,7 +598,7 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50 sticky top-0 z-20">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+              <th v-if="isColumnVisible('checkbox')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
                 <input
                   type="checkbox"
                   :checked="allSelected"
@@ -576,23 +606,24 @@
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.ip') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.hostname') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osType') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osVersion') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.deviceType') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.cpuCores') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.memory') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.disk') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.collectionStatus') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.source') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.tags') }}</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 z-10">{{ $t('common.operation') }}</th>
+              <th v-if="isColumnVisible('ip')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.ip') }}</th>
+              <th v-if="isColumnVisible('hostname')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.hostname') }}</th>
+              <th v-if="isColumnVisible('os_type')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osType') }}</th>
+              <th v-if="isColumnVisible('distribution')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.distribution') }}</th>
+              <th v-if="isColumnVisible('os_version')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osVersion') }}</th>
+              <th v-if="isColumnVisible('device_type')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.deviceType') }}</th>
+              <th v-if="isColumnVisible('cpu_cores')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.cpuCores') }}</th>
+              <th v-if="isColumnVisible('memory')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.memory') }}</th>
+              <th v-if="isColumnVisible('disk')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.disk') }}</th>
+              <th v-if="isColumnVisible('collection_status')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.collectionStatus') }}</th>
+              <th v-if="isColumnVisible('source')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.source') }}</th>
+              <th v-if="isColumnVisible('tags')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.tags') }}</th>
+              <th v-if="isColumnVisible('operation')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 z-10">{{ $t('common.operation') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!loading && hosts.length === 0" class="text-center py-8">
-              <td colspan="13" class="px-4 py-4 text-gray-500">
+              <td :colspan="visibleColumns.length + 1" class="px-4 py-4 text-gray-500">
                 <ServerIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
                 <p>{{ $t('hosts.noHosts') }}</p>
               </td>
@@ -605,7 +636,7 @@
               :class="{ 'bg-blue-50 hover:bg-blue-100': selectedHosts.includes(host.id!) }"
               @click="toggleHostSelection(host.id!)"
             >
-              <td class="px-4 py-4 whitespace-nowrap sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
+              <td v-if="isColumnVisible('checkbox')" class="px-4 py-4 whitespace-nowrap sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
                   :class="{ 'bg-blue-50 group-hover:bg-blue-100': selectedHosts.includes(host.id!) }"
                   @click.stop
               >
@@ -616,32 +647,34 @@
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{{ host.ip }}</td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.hostname || '-' }}</td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td v-if="isColumnVisible('ip')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{{ host.ip }}</td>
+              <td v-if="isColumnVisible('hostname')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.hostname || '-' }}</td>
+              <td v-if="isColumnVisible('os_type')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                 <span class="capitalize">{{ host.os_type || '-' }}</span>
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.os_version || '-' }}</td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td v-if="isColumnVisible('distribution')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.distribution || '-' }}</td>
+              <td v-if="isColumnVisible('os_version')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.os_version || '-' }}</td>
+              <td v-if="isColumnVisible('device_type')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                 <span class="inline-flex items-center">
                   <ComputerDesktopIcon v-if="host.is_physical" class="h-4 w-4 mr-1 text-gray-400" />
                   <CloudIcon v-else class="h-4 w-4 mr-1 text-gray-400" />
                   {{ host.is_physical ? $t('hosts.physical') : $t('hosts.virtual') }}
                 </span>
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td v-if="isColumnVisible('cpu_cores')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ host.cpu_cores ? `${host.cpu_cores}${$t('hosts.cores')}` : '-' }}
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ host.memory_total ? formatBytes(host.memory_total * 1024 * 1024, 'GB') : '-' }}
+              <td v-if="isColumnVisible('memory')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                {{ host.memory_total ? formatGB(host.memory_total) : '-' }}
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ host.disk_total_size ? formatBytes(host.disk_total_size * 1024 * 1024, 'GB') : '-' }}
+              <td v-if="isColumnVisible('disk')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                {{ host.disk_total_size ? formatGB(host.disk_total_size) : '-' }}
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm">
+              <td v-if="isColumnVisible('collection_status')" class="px-4 py-4 whitespace-nowrap text-sm">
                 <span
                   :class="getCollectionStatusClass(host.collection_status)"
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  :title="host.collection_status === 'failed' && host.error_message ? host.error_message : ''"
                 >
                   <component
                     :is="getCollectionStatusIcon(host.collection_status)"
@@ -650,7 +683,7 @@
                   {{ getCollectionStatusText(host.collection_status) }}
                 </span>
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td v-if="isColumnVisible('source')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                 <span class="inline-flex items-center">
                   <component
                     :is="getSourceIcon(host.source)"
@@ -660,7 +693,7 @@
                   {{ getSourceText(host.source) }}
                 </span>
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm" @click.stop>
+              <td v-if="isColumnVisible('tags')" class="px-4 py-4 whitespace-nowrap text-sm" @click.stop>
                 <div class="flex flex-wrap gap-1 items-center">
                   <span
                     v-for="tag in host.tags"
@@ -689,7 +722,7 @@
                   </button>
                 </div>
               </td>
-              <td class="px-4 py-4 whitespace-nowrap text-sm font-medium sticky right-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
+              <td v-if="isColumnVisible('operation')" class="px-4 py-4 whitespace-nowrap text-sm font-medium sticky right-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
                   :class="{ 'bg-blue-50 group-hover:bg-blue-100': selectedHosts.includes(host.id!) }"
                   @click.stop
               >
@@ -703,6 +736,7 @@
                     <EyeIcon class="h-5 w-5" />
                   </button>
                   <button
+                    v-if="host.id && host.os_type !== 'VMware ESXi'"
                     @click="editHost(host)"
                     class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
                     :title="$t('common.edit')"
@@ -710,7 +744,7 @@
                     <PencilIcon class="h-5 w-5" />
                   </button>
                   <button
-                    v-if="host.id"
+                    v-if="host.id && host.os_type !== 'VMware ESXi'"
                     @click="collectHost(host.id)"
                     :disabled="host.collection_status === 'collecting'"
                     class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -896,11 +930,11 @@
           </div>
           <div>
               <label class="text-xs font-medium text-gray-500">{{ $t('hosts.memoryTotal') }}</label>
-              <p class="mt-1 text-sm text-gray-900">{{ hostDetail.memory_total ? formatBytes(hostDetail.memory_total * 1024 * 1024, 'GB') : '-' }}</p>
+              <p class="mt-1 text-sm text-gray-900">{{ hostDetail.memory_total ? formatGB(hostDetail.memory_total) : '-' }}</p>
           </div>
           <div>
               <label class="text-xs font-medium text-gray-500">{{ $t('hosts.memoryFree') }}</label>
-              <p class="mt-1 text-sm text-gray-900">{{ hostDetail.memory_free ? formatBytes(hostDetail.memory_free * 1024 * 1024, 'GB') : '-' }}</p>
+              <p class="mt-1 text-sm text-gray-900">{{ hostDetail.memory_free ? formatGB(hostDetail.memory_free) : '-' }}</p>
           </div>
           <div>
               <label class="text-xs font-medium text-gray-500">{{ $t('hosts.vendor') }}</label>
@@ -1889,6 +1923,57 @@ const selectedExportFields = ref<string[]>([])
 
 let applyingExportTemplate = false
 
+// Column visibility management
+const STORAGE_KEY_COLUMNS = 'hosts_table_visible_columns'
+const defaultVisibleColumns = ['checkbox', 'ip', 'hostname', 'os_type', 'distribution', 'os_version', 'device_type', 'cpu_cores', 'memory', 'disk', 'collection_status', 'source', 'tags', 'operation']
+
+// Load visible columns from localStorage or use defaults
+const loadVisibleColumns = (): string[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_COLUMNS)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Ensure required columns are always visible
+      const required = ['checkbox', 'ip', 'operation']
+      return [...new Set([...required, ...parsed])]
+    }
+  } catch (e) {
+    console.warn('Failed to load column preferences:', e)
+  }
+  return defaultVisibleColumns
+}
+
+const visibleColumns = ref<string[]>(loadVisibleColumns())
+
+// Save to localStorage when changed
+watch(visibleColumns, (newVal) => {
+  try {
+    localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(newVal))
+  } catch (e) {
+    console.warn('Failed to save column preferences:', e)
+  }
+}, { deep: true })
+
+// Available columns configuration
+const availableColumns = computed(() => [
+  { key: 'checkbox', label: t('common.select') },
+  { key: 'ip', label: t('hosts.ip') },
+  { key: 'hostname', label: t('hosts.hostname') },
+  { key: 'os_type', label: t('hosts.osType') },
+  { key: 'distribution', label: t('hosts.distribution') },
+  { key: 'os_version', label: t('hosts.osVersion') },
+  { key: 'device_type', label: t('hosts.deviceType') },
+  { key: 'cpu_cores', label: t('hosts.cpuCores') },
+  { key: 'memory', label: t('hosts.memory') },
+  { key: 'disk', label: t('hosts.disk') },
+  { key: 'collection_status', label: t('hosts.collectionStatus') },
+  { key: 'source', label: t('hosts.source') },
+  { key: 'tags', label: t('hosts.tags') },
+])
+
+// Helper to check if column is visible
+const isColumnVisible = (key: string) => visibleColumns.value.includes(key)
+
 const searchFields = computed(() => [
   { value: 'all', label: t('hosts.searchAll') },
   { value: 'ip', label: t('hosts.ip') },
@@ -2784,6 +2869,12 @@ const formatBytes = (bytes: number, unit: 'GB' | 'MB' = 'GB'): string => {
     const mb = bytes / (1024 * 1024)
     return `${mb.toFixed(2)}MB`
   }
+}
+
+// Format GB value (value is already in GB from database)
+const formatGB = (gb: number): string => {
+  if (!gb || gb === 0) return '-'
+  return `${gb.toFixed(2)} GB`
 }
 
 const openBatchCredentialsModal = () => {

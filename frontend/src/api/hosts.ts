@@ -8,6 +8,7 @@ export interface Host {
   vendor?: string
   os_type?: string
   os_version?: string
+  distribution?: string
   cpu_info?: string
   cpu_cores?: number
   memory_total?: number
@@ -20,6 +21,7 @@ export interface Host {
   virtualization_platform_id?: number
   collection_status?: string
   source?: string
+  error_message?: string
   tags?: Array<{ id: number; name: string; color?: string }>
 }
 

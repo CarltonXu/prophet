@@ -1,6 +1,6 @@
 <template>
-  <div class="px-4 py-6 sm:px-0">
-    <div class="mb-4 flex items-center justify-between">
+  <div :class="['sm:px-0', isCanvasFullscreen ? 'p-0 fixed inset-0 z-[9998] bg-white' : 'px-4 py-6']">
+    <div v-if="!isCanvasFullscreen" class="mb-4 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <button
           @click="$router.push('/applications')"

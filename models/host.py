@@ -24,6 +24,7 @@ class Host(db.Model):
     os_version = db.Column(db.String(255))
     os_kernel = db.Column(db.String(255))  # Kernel version
     os_bit = db.Column(db.String(20))  # 32-bit/64-bit
+    distribution = db.Column(db.String(100))  # OS distribution (e.g., Ubuntu, CentOS)
     boot_type = db.Column(db.String(10))  # bios/efi
     
     # Hardware information
@@ -86,6 +87,7 @@ class Host(db.Model):
             'os_version': self.os_version,
             'os_kernel': self.os_kernel,
             'os_bit': self.os_bit,
+            'distribution': self.distribution,
             'boot_type': self.boot_type,
             'cpu_info': self.cpu_info,
             'cpu_cores': self.cpu_cores,

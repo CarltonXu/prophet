@@ -495,9 +495,23 @@ def get_hosts():
     
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
+    # Get error messages for failed hosts
+    host_dicts = []
+    for host in pagination.items:
+        host_dict = host.to_dict()
+        # Add error_message from latest failed HostDetail if collection_status is 'failed'
+        if host.collection_status == 'failed':
+            latest_failed_detail = HostDetail.query.filter_by(
+                host_id=host.id,
+                status='failed'
+            ).order_by(HostDetail.collected_at.desc()).first()
+            if latest_failed_detail and latest_failed_detail.error_message:
+                host_dict['error_message'] = latest_failed_detail.error_message
+        host_dicts.append(host_dict)
+    
     return jsonify({
         'code': 200,
-        'data': [host.to_dict() for host in pagination.items],
+        'data': host_dicts,
         'pagination': {
             'page': page,
             'per_page': per_page,
@@ -513,9 +527,19 @@ def get_host(host_id):
     """Get host details"""
     host = Host.query.filter_by(id=host_id, deleted_at=None).first_or_404()
     
+    host_dict = host.to_dict(include_details=True)
+    # Add error_message from latest failed HostDetail if collection_status is 'failed'
+    if host.collection_status == 'failed':
+        latest_failed_detail = HostDetail.query.filter_by(
+            host_id=host.id,
+            status='failed'
+        ).order_by(HostDetail.collected_at.desc()).first()
+        if latest_failed_detail and latest_failed_detail.error_message:
+            host_dict['error_message'] = latest_failed_detail.error_message
+    
     return jsonify({
         'code': 200,
-        'data': host.to_dict(include_details=True)
+        'data': host_dict
     })
 
 
@@ -1069,17 +1093,8 @@ def get_hosts_tree():
         if not platform:
             continue
         
-        # For VMware, try to identify ESXi hosts
-        # ESXi hosts are typically stored with collection_method='vmware_esxi' in HostDetail
-        is_esxi = False
-        if platform.type == 'vmware':
-            from models import HostDetail
-            esxi_details = HostDetail.query.filter_by(
-                host_id=host.id,
-                collection_method='vmware_esxi'
-            ).first()
-            if esxi_details:
-                is_esxi = True
+        # For VMware, identify ESXi hosts by os_type
+        is_esxi = (host.os_type == 'VMware ESXi')
         
         if is_esxi:
             esxi_name = host.hostname or host.ip

@@ -187,6 +187,8 @@ class CollectionParserService:
                 # Update OS information
                 if os_info.get('os'):
                     host.os_type = os_info.get('os')
+                if 'distribution' in os_info:
+                    host.distribution = os_info.get('distribution')
                 if os_info.get('os_version'):
                     host.os_version = os_info.get('os_version')
                 if os_info.get('os_kernel'):

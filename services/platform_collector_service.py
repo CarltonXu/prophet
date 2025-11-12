@@ -163,6 +163,27 @@ class PlatformCollectorService:
     def _collect_vmware_hosts(self, hosts: List[Host]):
         """Collect VMware hosts using platform API"""
         try:
+            # Filter out ESXi hosts - they cannot be collected via standard methods
+            vm_hosts = [h for h in hosts if h.os_type != 'VMware ESXi']
+            esxi_hosts = [h for h in hosts if h.os_type == 'VMware ESXi']
+            
+            if esxi_hosts:
+                logger.info(f"Filtered out {len(esxi_hosts)} ESXi hosts from collection (ESXi hosts are synced from platform, not collected)")
+                for esxi_host in esxi_hosts:
+                    logger.info(f"  - ESXi host ID: {esxi_host.id}, IP: {esxi_host.ip}, Hostname: {esxi_host.hostname}")
+                    # Mark ESXi hosts as collected (they are already synced from platform)
+                    esxi_host.collection_status = 'collected'
+                    esxi_host.last_collected_at = datetime.utcnow()
+            
+            if not vm_hosts:
+                logger.warning("No VM hosts to collect after filtering ESXi hosts")
+                if esxi_hosts:
+                    db.session.commit()
+                return
+            
+            # Use filtered VM hosts for collection
+            hosts = vm_hosts
+            
             from prophet.collector.hosts.vmware import VMwareCollector
             
             # Create temp directory for collection

@@ -279,6 +279,24 @@ class CollectorService:
             temp_dir = tempfile.mkdtemp()
             
             try:
+                # Prevent collection for ESXI hosts
+                if host.os_type == 'VMware ESXi':
+                    logger.warning(f"VMware ESXi hosts cannot be collected via standard methods. Skipping collection for host {host.id} ({host.ip})")
+                    host.collection_status = 'collected'
+                    host.last_collected_at = datetime.utcnow()
+                    
+                    # Record failure with error message
+                    host_detail = HostDetail(
+                        host_id=host.id,
+                        details='',
+                        status='collected',
+                        collection_method='none',
+                        error_message='VMware ESXi hosts cannot be collected via standard collection methods. VMware ESXi host information is synced from VMware platform.',
+                    )
+                    db.session.add(host_detail)
+                    db.session.commit()
+                    return False
+                
                 # Mark host as collecting before starting long-running operations
                 host.collection_status = 'collecting'
                 host.last_collected_at = datetime.utcnow()

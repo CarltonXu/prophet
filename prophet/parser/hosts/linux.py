@@ -65,10 +65,11 @@ class LinuxParser(BaseHostParser):
 
     def parse_os(self):
         return {
-            "os": self._host_info["ansible_distribution"],
-            "os_version": self._host_info["ansible_distribution_version"],
-            "os_bit": self._host_info["ansible_architecture"],
-            "os_kernel": self._host_info["ansible_kernel"]
+            "os": "Linux",
+            "distribution": self._host_info.get("ansible_distribution", ""),
+            "os_version": self._host_info.get("ansible_distribution_version", ""),
+            "os_bit": self._host_info.get("ansible_architecture", ""),
+            "os_kernel": self._host_info.get("ansible_kernel", "")
         }
 
     def parse_cpu(self):
