@@ -257,70 +257,188 @@
                 </div>
                 <!-- Search -->
                 <div class="relative">
-                  <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70" />
+                  <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white z-10" />
                   <input
                     v-model="columnSearchQuery"
                     type="text"
                     :placeholder="$t('common.search')"
-                    class="w-full pl-9 pr-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all"
+                    class="w-full pl-9 pr-9 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all relative z-0"
                     @click.stop
+                    @keydown.escape="columnSearchQuery = ''"
                   />
+                  <button
+                    v-if="columnSearchQuery"
+                    @click.stop="columnSearchQuery = ''"
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white z-10 transition-colors"
+                  >
+                    <XMarkIcon class="h-4 w-4" />
+                  </button>
                 </div>
-                <!-- Selected count -->
-                <div class="mt-2.5 text-xs text-white/90">
-                  {{ $t('hosts.selectedColumnsCount', { count: visibleColumnsCount, total: availableColumns.length }) }}
+                <!-- Selected count and view toggle -->
+                <div class="mt-2.5 flex items-center justify-between">
+                  <div class="text-xs text-white/90">
+                    {{ $t('hosts.selectedColumnsCount', { count: visibleColumnsCount, total: availableColumns.length }) }}
+                  </div>
+                  <button
+                    @click.stop="showGroupedView = !showGroupedView"
+                    class="px-2 py-1 text-xs font-medium text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors"
+                    :title="showGroupedView ? $t('hosts.showListView') : $t('hosts.showGroupedView')"
+                  >
+                    <Bars3Icon v-if="showGroupedView" class="h-3.5 w-3.5" />
+                    <Squares2X2Icon v-else class="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+              <!-- Templates -->
+              <div v-if="!columnSearchQuery" class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+                <div class="text-xs font-semibold text-gray-600 mb-2">{{ $t('hosts.columnTemplates') }}</div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="template in columnTemplates"
+                    :key="template.id"
+                    @click.stop="applyTemplate(template)"
+                    class="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
+                    :title="template.description"
+                  >
+                    {{ template.name }}
+                  </button>
                 </div>
               </div>
               <!-- Column List -->
-              <div class="py-3 max-h-[360px] overflow-y-auto custom-scrollbar">
-                <div v-if="filteredColumns.length === 0" class="px-5 py-8 text-center">
+              <Transition
+                mode="out-in"
+                enter-active-class="transition-opacity duration-150 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition-opacity duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <div v-if="filteredColumns.length === 0" key="empty" class="px-5 py-8 text-center">
                   <MagnifyingGlassIcon class="h-10 w-10 mx-auto text-gray-300 mb-2" />
                   <p class="text-sm text-gray-500">{{ $t('hosts.noColumnsFound') }}</p>
                 </div>
-                <label
-                  v-for="column in filteredColumns"
-                  :key="column.key"
-                  class="flex items-center px-5 py-3 hover:bg-blue-50/50 cursor-pointer transition-all duration-150 group border-l-4 border-transparent hover:border-blue-500"
-                  :class="{ 'bg-blue-50/30 border-blue-500': isColumnVisible(column.key) }"
-                >
-                  <div class="relative flex items-center flex-1">
-                    <!-- Custom Checkbox -->
-                    <div class="relative flex items-center mr-3">
-                      <input
-                        type="checkbox"
-                        v-model="visibleColumns"
-                        :value="column.key"
-                        class="sr-only"
-                      />
-                      <div
-                        class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
-                        :class="isColumnVisible(column.key) 
-                          ? 'bg-blue-500 border-blue-500 shadow-sm' 
-                          : 'bg-white border-gray-300 group-hover:border-blue-400'"
-                      >
-                        <CheckIcon
-                          v-if="isColumnVisible(column.key)"
-                          class="h-3.5 w-3.5 text-white"
-                        />
+                <!-- Grouped View -->
+                <div v-else-if="showGroupedView && !columnSearchQuery" key="grouped" class="max-h-[360px] overflow-y-auto custom-scrollbar">
+                  <div class="py-3">
+                    <div v-for="(categoryKey, idx) in Object.keys(groupedColumns)" :key="categoryKey" class="relative">
+                      <div class="sticky top-0 z-20 px-5 py-2 bg-gray-50 border-b border-gray-100">
+                        <div class="flex items-center gap-2">
+                          <CpuChipIcon v-if="categoryKey === 'hardware'" class="h-4 w-4 text-gray-500" />
+                          <TagIcon v-else-if="categoryKey === 'metadata'" class="h-4 w-4 text-gray-500" />
+                          <InformationCircleIcon v-else class="h-4 w-4 text-gray-500" />
+                          <span class="text-xs font-semibold text-gray-700">{{ (columnCategories as any)[categoryKey]?.label || categoryKey }}</span>
+                          <span class="text-xs text-gray-500">({{ groupedColumns[categoryKey].length }})</span>
+                        </div>
                       </div>
+                      <label
+                        v-for="column in groupedColumns[categoryKey]"
+                        :key="column.key"
+                        class="flex items-center px-5 py-3 hover:bg-blue-50/50 cursor-pointer transition-all duration-150 group border-l-4 border-transparent hover:border-blue-500 relative"
+                        :class="{ 'bg-blue-50/30 border-blue-500': isColumnVisible(column.key) }"
+                      >
+                        <div class="relative flex items-center flex-1">
+                          <!-- Custom Checkbox -->
+                          <div class="relative flex items-center mr-3">
+                            <input
+                              type="checkbox"
+                              v-model="visibleColumns"
+                              :value="column.key"
+                              class="sr-only"
+                            />
+                            <div
+                              class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
+                              :class="isColumnVisible(column.key) 
+                                ? 'bg-blue-500 border-blue-500 shadow-sm' 
+                                : 'bg-white border-gray-300 group-hover:border-blue-400'"
+                            >
+                              <CheckIcon
+                                v-if="isColumnVisible(column.key)"
+                                class="h-3.5 w-3.5 text-white"
+                              />
+                            </div>
+                          </div>
+                          <span 
+                            class="text-sm select-none transition-colors flex-1"
+                            :class="isColumnVisible(column.key) 
+                              ? 'text-gray-900 font-semibold' 
+                              : 'text-gray-700 group-hover:text-gray-900'"
+                            :title="column.description"
+                          >
+                            {{ column.label }}
+                          </span>
+                          <!-- Required badge -->
+                          <span
+                            v-if="column.required || ['checkbox', 'ip', 'operation'].includes(column.key)"
+                            class="ml-2 px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded"
+                          >
+                            {{ $t('common.required') }}
+                          </span>
+                        </div>
+                      </label>
                     </div>
-                    <span 
-                      class="text-sm select-none transition-colors flex-1"
-                      :class="isColumnVisible(column.key) 
-                        ? 'text-gray-900 font-semibold' 
-                        : 'text-gray-700 group-hover:text-gray-900'"
-                    >
-                      {{ column.label }}
-                    </span>
-                    <!-- Required badge -->
-                    <span
-                      v-if="['checkbox', 'ip', 'operation'].includes(column.key)"
-                      class="ml-2 px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded"
-                    >
-                      {{ $t('common.required') }}
-                    </span>
                   </div>
-                </label>
+                </div>
+                <!-- List View -->
+                <div v-else key="list" class="py-3 max-h-[360px] overflow-y-auto custom-scrollbar">
+                  <label
+                    v-for="column in filteredColumns"
+                    :key="column.key"
+                    class="flex items-center px-5 py-3 hover:bg-blue-50/50 cursor-pointer transition-all duration-150 group border-l-4 border-transparent hover:border-blue-500"
+                    :class="{ 'bg-blue-50/30 border-blue-500': isColumnVisible(column.key) }"
+                  >
+                    <div class="relative flex items-center flex-1">
+                      <!-- Custom Checkbox -->
+                      <div class="relative flex items-center mr-3">
+                        <input
+                          type="checkbox"
+                          v-model="visibleColumns"
+                          :value="column.key"
+                          class="sr-only"
+                        />
+                        <div
+                          class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
+                          :class="isColumnVisible(column.key) 
+                            ? 'bg-blue-500 border-blue-500 shadow-sm' 
+                            : 'bg-white border-gray-300 group-hover:border-blue-400'"
+                        >
+                          <CheckIcon
+                            v-if="isColumnVisible(column.key)"
+                            class="h-3.5 w-3.5 text-white"
+                          />
+                        </div>
+                      </div>
+                      <span 
+                        class="text-sm select-none transition-colors flex-1"
+                        :class="isColumnVisible(column.key) 
+                          ? 'text-gray-900 font-semibold' 
+                          : 'text-gray-700 group-hover:text-gray-900'"
+                        :title="column.description"
+                      >
+                        {{ column.label }}
+                      </span>
+                      <!-- Required badge -->
+                      <span
+                        v-if="column.required || ['checkbox', 'ip', 'operation'].includes(column.key)"
+                        class="ml-2 px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded"
+                      >
+                        {{ $t('common.required') }}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </Transition>
+              <!-- Footer -->
+              <div class="px-5 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <button
+                  @click.stop="resetColumnsToDefault"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  {{ $t('hosts.resetToDefault') }}
+                </button>
+                <div class="text-xs text-gray-500">
+                  {{ $t('hosts.pressEscToClose') }}
+                </div>
               </div>
             </MenuItems>
           </Menu>
@@ -2058,21 +2176,51 @@ watch(visibleColumns, (newVal) => {
   }
 }, { deep: true })
 
-// Available columns configuration
+// Column categories
+const columnCategories = {
+  basic: { label: t('hosts.columnCategory.basic'), icon: 'info' },
+  hardware: { label: t('hosts.columnCategory.hardware'), icon: 'cpu' },
+  status: { label: t('hosts.columnCategory.status'), icon: 'status' },
+  metadata: { label: t('hosts.columnCategory.metadata'), icon: 'tag' },
+}
+
+// Available columns configuration with categories and descriptions
 const availableColumns = computed(() => [
-  { key: 'checkbox', label: t('common.select') },
-  { key: 'ip', label: t('hosts.ip') },
-  { key: 'hostname', label: t('hosts.hostname') },
-  { key: 'os_type', label: t('hosts.osType') },
-  { key: 'distribution', label: t('hosts.distribution') },
-  { key: 'os_version', label: t('hosts.osVersion') },
-  { key: 'device_type', label: t('hosts.deviceType') },
-  { key: 'cpu_cores', label: t('hosts.cpuCores') },
-  { key: 'memory', label: t('hosts.memory') },
-  { key: 'disk', label: t('hosts.disk') },
-  { key: 'collection_status', label: t('hosts.collectionStatus') },
-  { key: 'source', label: t('hosts.source') },
-  { key: 'tags', label: t('hosts.tags') },
+  { key: 'checkbox', label: t('common.select'), category: 'basic', description: t('hosts.columnDesc.checkbox'), required: true },
+  { key: 'ip', label: t('hosts.ip'), category: 'basic', description: t('hosts.columnDesc.ip'), required: true },
+  { key: 'hostname', label: t('hosts.hostname'), category: 'basic', description: t('hosts.columnDesc.hostname') },
+  { key: 'os_type', label: t('hosts.osType'), category: 'basic', description: t('hosts.columnDesc.osType') },
+  { key: 'distribution', label: t('hosts.distribution'), category: 'basic', description: t('hosts.columnDesc.distribution') },
+  { key: 'os_version', label: t('hosts.osVersion'), category: 'basic', description: t('hosts.columnDesc.osVersion') },
+  { key: 'device_type', label: t('hosts.deviceType'), category: 'basic', description: t('hosts.columnDesc.deviceType') },
+  { key: 'cpu_cores', label: t('hosts.cpuCores'), category: 'hardware', description: t('hosts.columnDesc.cpuCores') },
+  { key: 'memory', label: t('hosts.memory'), category: 'hardware', description: t('hosts.columnDesc.memory') },
+  { key: 'disk', label: t('hosts.disk'), category: 'hardware', description: t('hosts.columnDesc.disk') },
+  { key: 'collection_status', label: t('hosts.collectionStatus'), category: 'status', description: t('hosts.columnDesc.collectionStatus') },
+  { key: 'source', label: t('hosts.source'), category: 'status', description: t('hosts.columnDesc.source') },
+  { key: 'tags', label: t('hosts.tags'), category: 'metadata', description: t('hosts.columnDesc.tags') },
+])
+
+// Column templates
+const columnTemplates = computed(() => [
+  {
+    id: 'basic',
+    name: t('hosts.columnTemplate.basic'),
+    description: t('hosts.columnTemplate.basicDesc'),
+    columns: ['checkbox', 'ip', 'hostname', 'os_type', 'device_type', 'operation']
+  },
+  {
+    id: 'detailed',
+    name: t('hosts.columnTemplate.detailed'),
+    description: t('hosts.columnTemplate.detailedDesc'),
+    columns: ['checkbox', 'ip', 'hostname', 'os_type', 'distribution', 'os_version', 'device_type', 'cpu_cores', 'memory', 'disk', 'collection_status', 'source', 'tags', 'operation']
+  },
+  {
+    id: 'hardware',
+    name: t('hosts.columnTemplate.hardware'),
+    description: t('hosts.columnTemplate.hardwareDesc'),
+    columns: ['checkbox', 'ip', 'hostname', 'cpu_cores', 'memory', 'disk', 'operation']
+  }
 ])
 
 // Column search query
@@ -2086,9 +2234,30 @@ const filteredColumns = computed(() => {
   const query = columnSearchQuery.value.toLowerCase().trim()
   return availableColumns.value.filter(column => 
     column.label.toLowerCase().includes(query) ||
-    column.key.toLowerCase().includes(query)
+    column.key.toLowerCase().includes(query) ||
+    column.description?.toLowerCase().includes(query)
   )
 })
+
+// Grouped columns by category
+const groupedColumns = computed(() => {
+  const groups: Record<string, typeof availableColumns.value> = {}
+  filteredColumns.value.forEach(column => {
+    const category = column.category || 'basic'
+    if (!groups[category]) {
+      groups[category] = []
+    }
+    groups[category].push(column)
+  })
+  return groups
+})
+
+// Show grouped view
+const showGroupedView = ref(true)
+
+// Drag and drop state
+const draggedColumn = ref<string | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 // Visible columns count (excluding required columns for display)
 const visibleColumnsCount = computed(() => {
@@ -2111,6 +2280,50 @@ const selectAllColumns = () => {
 const deselectAllColumns = () => {
   const required = ['checkbox', 'ip', 'operation']
   visibleColumns.value = required
+}
+
+// Reset columns to default
+const resetColumnsToDefault = () => {
+  visibleColumns.value = [...defaultVisibleColumns]
+}
+
+// Apply column template
+const applyTemplate = (template: typeof columnTemplates.value[0]) => {
+  visibleColumns.value = [...template.columns]
+}
+
+// Drag and drop handlers
+const handleDragStart = (columnKey: string) => {
+  draggedColumn.value = columnKey
+}
+
+const handleDragOver = (event: DragEvent, index: number) => {
+  event.preventDefault()
+  dragOverIndex.value = index
+}
+
+const handleDragEnd = () => {
+  draggedColumn.value = null
+  dragOverIndex.value = null
+}
+
+const handleDrop = (event: DragEvent, targetIndex: number) => {
+  event.preventDefault()
+  if (!draggedColumn.value) return
+  
+  const currentIndex = visibleColumns.value.indexOf(draggedColumn.value)
+  if (currentIndex === -1 || currentIndex === targetIndex) {
+    handleDragEnd()
+    return
+  }
+  
+  // Reorder columns
+  const newColumns = [...visibleColumns.value]
+  newColumns.splice(currentIndex, 1)
+  newColumns.splice(targetIndex, 0, draggedColumn.value)
+  visibleColumns.value = newColumns
+  
+  handleDragEnd()
 }
 
 const searchFields = computed(() => [
