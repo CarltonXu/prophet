@@ -230,46 +230,95 @@
             <MenuButton class="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
               <Bars3BottomLeftIcon class="h-5 w-5" />
             </MenuButton>
-            <MenuItems class="absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
+            <MenuItems class="absolute right-0 z-50 mt-2 w-[420px] origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-gray-200 focus:outline-none overflow-hidden">
               <!-- Header -->
-              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <Bars3BottomLeftIcon class="h-4 w-4 text-blue-600" />
-                    <span class="text-sm font-semibold text-gray-900">{{ $t('hosts.selectColumns') }}</span>
+              <div class="bg-gradient-to-br from-blue-300 to-indigo-400 px-5 py-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2.5">
+                    <div class="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Bars3BottomLeftIcon class="h-4 w-4 text-white" />
+                    </div>
+                    <span class="text-base font-semibold text-white">{{ $t('hosts.selectColumns') }}</span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-center gap-2">
                     <button
                       @click.stop="selectAllColumns"
-                      class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                      class="px-3 py-1.5 text-xs font-semibold text-white bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-200"
                     >
                       {{ $t('common.selectAll') }}
                     </button>
-                    <span class="text-gray-300">•</span>
                     <button
                       @click.stop="deselectAllColumns"
-                      class="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                      class="px-3 py-1.5 text-xs font-semibold text-white bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-200"
                     >
                       {{ $t('common.deselectAll') }}
                     </button>
                   </div>
                 </div>
+                <!-- Search -->
+                <div class="relative">
+                  <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70" />
+                  <input
+                    v-model="columnSearchQuery"
+                    type="text"
+                    :placeholder="$t('common.search')"
+                    class="w-full pl-9 pr-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all"
+                    @click.stop
+                  />
+                </div>
+                <!-- Selected count -->
+                <div class="mt-2.5 text-xs text-white/90">
+                  {{ $t('hosts.selectedColumnsCount', { count: visibleColumnsCount, total: availableColumns.length }) }}
+                </div>
               </div>
               <!-- Column List -->
-              <div class="py-2 max-h-80 overflow-y-auto">
+              <div class="py-3 max-h-[360px] overflow-y-auto custom-scrollbar">
+                <div v-if="filteredColumns.length === 0" class="px-5 py-8 text-center">
+                  <MagnifyingGlassIcon class="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                  <p class="text-sm text-gray-500">{{ $t('hosts.noColumnsFound') }}</p>
+                </div>
                 <label
-                  v-for="column in availableColumns"
+                  v-for="column in filteredColumns"
                   :key="column.key"
-                  class="flex items-center px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors group"
+                  class="flex items-center px-5 py-3 hover:bg-blue-50/50 cursor-pointer transition-all duration-150 group border-l-4 border-transparent hover:border-blue-500"
+                  :class="{ 'bg-blue-50/30 border-blue-500': isColumnVisible(column.key) }"
                 >
-                  <div class="relative flex items-center">
-                    <input
-                      type="checkbox"
-                      v-model="visibleColumns"
-                      :value="column.key"
-                      class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 mr-3 cursor-pointer transition-all"
-                    />
-                    <span class="text-sm text-gray-700 select-none group-hover:text-gray-900 font-medium transition-colors">{{ column.label }}</span>
+                  <div class="relative flex items-center flex-1">
+                    <!-- Custom Checkbox -->
+                    <div class="relative flex items-center mr-3">
+                      <input
+                        type="checkbox"
+                        v-model="visibleColumns"
+                        :value="column.key"
+                        class="sr-only"
+                      />
+                      <div
+                        class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
+                        :class="isColumnVisible(column.key) 
+                          ? 'bg-blue-500 border-blue-500 shadow-sm' 
+                          : 'bg-white border-gray-300 group-hover:border-blue-400'"
+                      >
+                        <CheckIcon
+                          v-if="isColumnVisible(column.key)"
+                          class="h-3.5 w-3.5 text-white"
+                        />
+                      </div>
+                    </div>
+                    <span 
+                      class="text-sm select-none transition-colors flex-1"
+                      :class="isColumnVisible(column.key) 
+                        ? 'text-gray-900 font-semibold' 
+                        : 'text-gray-700 group-hover:text-gray-900'"
+                    >
+                      {{ column.label }}
+                    </span>
+                    <!-- Required badge -->
+                    <span
+                      v-if="['checkbox', 'ip', 'operation'].includes(column.key)"
+                      class="ml-2 px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded"
+                    >
+                      {{ $t('common.required') }}
+                    </span>
                   </div>
                 </label>
               </div>
@@ -1782,6 +1831,26 @@
   </div>
 </template>
 
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
@@ -1856,6 +1925,7 @@ import {
   XMarkIcon,
   TagIcon,
   ExclamationTriangleIcon,
+  CheckIcon,
 } from '@heroicons/vue/24/outline'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 
@@ -2004,6 +2074,27 @@ const availableColumns = computed(() => [
   { key: 'source', label: t('hosts.source') },
   { key: 'tags', label: t('hosts.tags') },
 ])
+
+// Column search query
+const columnSearchQuery = ref('')
+
+// Filtered columns based on search
+const filteredColumns = computed(() => {
+  if (!columnSearchQuery.value.trim()) {
+    return availableColumns.value
+  }
+  const query = columnSearchQuery.value.toLowerCase().trim()
+  return availableColumns.value.filter(column => 
+    column.label.toLowerCase().includes(query) ||
+    column.key.toLowerCase().includes(query)
+  )
+})
+
+// Visible columns count (excluding required columns for display)
+const visibleColumnsCount = computed(() => {
+  const required = ['checkbox', 'ip', 'operation']
+  return visibleColumns.value.filter(col => !required.includes(col)).length
+})
 
 // Helper to check if column is visible
 const isColumnVisible = (key: string) => visibleColumns.value.includes(key)
