@@ -237,7 +237,7 @@
                   <div class="flex items-center gap-2.5">
                     <div class="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
                       <Bars3BottomLeftIcon class="h-4 w-4 text-white" />
-                    </div>
+                  </div>
                     <span class="text-base font-semibold text-white">{{ $t('hosts.selectColumns') }}</span>
                   </div>
                   <div class="flex items-center gap-2">
@@ -321,7 +321,7 @@
                 <!-- Grouped View -->
                 <div v-else-if="showGroupedView && !columnSearchQuery" key="grouped" class="max-h-[360px] overflow-y-auto custom-scrollbar">
                   <div class="py-3">
-                    <div v-for="(categoryKey, idx) in Object.keys(groupedColumns)" :key="categoryKey" class="relative">
+                    <div v-for="categoryKey in Object.keys(groupedColumns)" :key="categoryKey" class="relative">
                       <div class="sticky top-0 z-20 px-5 py-2 bg-gray-50 border-b border-gray-100">
                         <div class="flex items-center gap-2">
                           <CpuChipIcon v-if="categoryKey === 'hardware'" class="h-4 w-4 text-gray-500" />
@@ -331,19 +331,19 @@
                           <span class="text-xs text-gray-500">({{ groupedColumns[categoryKey].length }})</span>
                         </div>
                       </div>
-                      <label
+                <label
                         v-for="column in groupedColumns[categoryKey]"
-                        :key="column.key"
+                  :key="column.key"
                         class="flex items-center px-5 py-3 hover:bg-blue-50/50 cursor-pointer transition-all duration-150 group border-l-4 border-transparent hover:border-blue-500 relative"
                         :class="{ 'bg-blue-50/30 border-blue-500': isColumnVisible(column.key) }"
-                      >
+                >
                         <div class="relative flex items-center flex-1">
                           <!-- Custom Checkbox -->
                           <div class="relative flex items-center mr-3">
-                            <input
-                              type="checkbox"
-                              v-model="visibleColumns"
-                              :value="column.key"
+                    <input
+                      type="checkbox"
+                      v-model="visibleColumns"
+                      :value="column.key"
                               class="sr-only"
                             />
                             <div
@@ -374,8 +374,8 @@
                           >
                             {{ $t('common.required') }}
                           </span>
-                        </div>
-                      </label>
+                  </div>
+                </label>
                     </div>
                   </div>
                 </div>
@@ -788,27 +788,41 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50 sticky top-0 z-20">
             <tr>
-              <th v-if="isColumnVisible('checkbox')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+              <th
+                v-for="(columnKey, index) in visibleColumns"
+                :key="columnKey"
+                :draggable="columnKey !== 'checkbox' && columnKey !== 'ip' && columnKey !== 'operation'"
+                @dragstart="handleHeaderDragStart($event, columnKey)"
+                @dragover="handleHeaderDragOver($event, index)"
+                @dragleave="handleHeaderDragLeave"
+                @drop="handleHeaderDrop($event, index)"
+                @dragend="handleHeaderDragEnd($event)"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap transition-colors group"
+                :class="{
+                  'sticky left-0 bg-gray-50 z-10': columnKey === 'checkbox',
+                  'sticky right-0 bg-gray-50 z-10': columnKey === 'operation',
+                  'cursor-move hover:bg-gray-100': columnKey !== 'checkbox' && columnKey !== 'ip' && columnKey !== 'operation',
+                  'border-l-2 border-blue-500': dragOverHeaderIndex === index && draggedHeaderColumn !== columnKey,
+                }"
+              >
+                <div class="flex items-center gap-2">
+                  <span v-if="columnKey === 'checkbox'">
                 <input
                   type="checkbox"
                   :checked="allSelected"
                   @change="toggleSelectAll"
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
+                  </span>
+                  <span v-else class="flex items-center gap-1.5 flex-1">
+                    <Bars3Icon
+                      v-if="columnKey !== 'checkbox' && columnKey !== 'ip' && columnKey !== 'operation'"
+                      class="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    />
+                    <span>{{ getColumnLabel(columnKey) }}</span>
+                  </span>
+                </div>
               </th>
-              <th v-if="isColumnVisible('ip')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.ip') }}</th>
-              <th v-if="isColumnVisible('hostname')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.hostname') }}</th>
-              <th v-if="isColumnVisible('os_type')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osType') }}</th>
-              <th v-if="isColumnVisible('distribution')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.distribution') }}</th>
-              <th v-if="isColumnVisible('os_version')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.osVersion') }}</th>
-              <th v-if="isColumnVisible('device_type')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.deviceType') }}</th>
-              <th v-if="isColumnVisible('cpu_cores')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.cpuCores') }}</th>
-              <th v-if="isColumnVisible('memory')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.memory') }}</th>
-              <th v-if="isColumnVisible('disk')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.disk') }}</th>
-              <th v-if="isColumnVisible('collection_status')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.collectionStatus') }}</th>
-              <th v-if="isColumnVisible('source')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.source') }}</th>
-              <th v-if="isColumnVisible('tags')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.tags') }}</th>
-              <th v-if="isColumnVisible('operation')" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 z-10">{{ $t('common.operation') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -826,131 +840,161 @@
               :class="{ 'bg-blue-50 hover:bg-blue-100': selectedHosts.includes(host.id!) }"
               @click="toggleHostSelection(host.id!)"
             >
-              <td v-if="isColumnVisible('checkbox')" class="px-4 py-4 whitespace-nowrap sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
-                  :class="{ 'bg-blue-50 group-hover:bg-blue-100': selectedHosts.includes(host.id!) }"
-                  @click.stop
+              <td
+                v-for="columnKey in visibleColumns"
+                :key="columnKey"
+                class="px-4 py-4 whitespace-nowrap text-sm transition-colors"
+                :class="{
+                  'sticky left-0 bg-white group-hover:bg-gray-50 z-10': columnKey === 'checkbox',
+                  'sticky right-0 bg-white group-hover:bg-gray-50 z-10': columnKey === 'operation',
+                  'bg-blue-50 group-hover:bg-blue-100': (columnKey === 'checkbox' || columnKey === 'operation') && selectedHosts.includes(host.id!),
+                  'text-gray-500': columnKey !== 'ip' && columnKey !== 'checkbox' && columnKey !== 'operation',
+                  'text-gray-900 font-medium': columnKey === 'ip',
+                }"
+                @click.stop="columnKey === 'tags' || columnKey === 'operation'"
               >
-                <input
-                  type="checkbox"
-                  :value="host.id"
-                  v-model="selectedHosts"
-                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-              </td>
-              <td v-if="isColumnVisible('ip')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{{ host.ip }}</td>
-              <td v-if="isColumnVisible('hostname')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.hostname || '-' }}</td>
-              <td v-if="isColumnVisible('os_type')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                <span class="capitalize">{{ host.os_type || '-' }}</span>
-              </td>
-              <td v-if="isColumnVisible('distribution')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.distribution || '-' }}</td>
-              <td v-if="isColumnVisible('os_version')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ host.os_version || '-' }}</td>
-              <td v-if="isColumnVisible('device_type')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                <span class="inline-flex items-center">
-                  <ComputerDesktopIcon v-if="host.is_physical" class="h-4 w-4 mr-1 text-gray-400" />
-                  <CloudIcon v-else class="h-4 w-4 mr-1 text-gray-400" />
-                  {{ host.is_physical ? $t('hosts.physical') : $t('hosts.virtual') }}
-                </span>
-              </td>
-              <td v-if="isColumnVisible('cpu_cores')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ host.cpu_cores ? `${host.cpu_cores}${$t('hosts.cores')}` : '-' }}
-              </td>
-              <td v-if="isColumnVisible('memory')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ host.memory_total ? formatGB(host.memory_total) : '-' }}
-              </td>
-              <td v-if="isColumnVisible('disk')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ host.disk_total_size ? formatGB(host.disk_total_size) : '-' }}
-              </td>
-              <td v-if="isColumnVisible('collection_status')" class="px-4 py-4 whitespace-nowrap text-sm">
-                <span
-                  :class="getCollectionStatusClass(host.collection_status)"
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  :title="host.collection_status === 'failed' && host.error_message ? host.error_message : ''"
-                >
-                  <component
-                    :is="getCollectionStatusIcon(host.collection_status)"
-                    class="h-3.5 w-3.5 mr-1"
+                <!-- Checkbox -->
+                <template v-if="columnKey === 'checkbox'">
+                  <input
+                    type="checkbox"
+                    :value="host.id"
+                    v-model="selectedHosts"
+                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  {{ getCollectionStatusText(host.collection_status) }}
-                </span>
-              </td>
-              <td v-if="isColumnVisible('source')" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                <span class="inline-flex items-center">
-                  <component
-                    :is="getSourceIcon(host.source)"
-                    class="h-4 w-4 mr-1"
-                    :class="getSourceIconColor(host.source)"
-                  />
-                  {{ getSourceText(host.source) }}
-                </span>
-              </td>
-              <td v-if="isColumnVisible('tags')" class="px-4 py-4 whitespace-nowrap text-sm" @click.stop>
-                <div class="flex flex-wrap gap-1 items-center">
+                </template>
+                <!-- IP -->
+                <template v-else-if="columnKey === 'ip'">
+                  {{ host.ip }}
+                </template>
+                <!-- Hostname -->
+                <template v-else-if="columnKey === 'hostname'">
+                  {{ host.hostname || '-' }}
+                </template>
+                <!-- OS Type -->
+                <template v-else-if="columnKey === 'os_type'">
+                  <span class="capitalize">{{ host.os_type || '-' }}</span>
+                </template>
+                <!-- Distribution -->
+                <template v-else-if="columnKey === 'distribution'">
+                  {{ host.distribution || '-' }}
+                </template>
+                <!-- OS Version -->
+                <template v-else-if="columnKey === 'os_version'">
+                  {{ host.os_version || '-' }}
+                </template>
+                <!-- Device Type -->
+                <template v-else-if="columnKey === 'device_type'">
+                  <span class="inline-flex items-center">
+                    <ComputerDesktopIcon v-if="host.is_physical" class="h-4 w-4 mr-1 text-gray-400" />
+                    <CloudIcon v-else class="h-4 w-4 mr-1 text-gray-400" />
+                    {{ host.is_physical ? $t('hosts.physical') : $t('hosts.virtual') }}
+                  </span>
+                </template>
+                <!-- CPU Cores -->
+                <template v-else-if="columnKey === 'cpu_cores'">
+                  {{ host.cpu_cores ? `${host.cpu_cores}${$t('hosts.cores')}` : '-' }}
+                </template>
+                <!-- Memory -->
+                <template v-else-if="columnKey === 'memory'">
+                  {{ host.memory_total ? formatGB(host.memory_total) : '-' }}
+                </template>
+                <!-- Disk -->
+                <template v-else-if="columnKey === 'disk'">
+                  {{ host.disk_total_size ? formatGB(host.disk_total_size) : '-' }}
+                </template>
+                <!-- Collection Status -->
+                <template v-else-if="columnKey === 'collection_status'">
                   <span
-                    v-for="tag in host.tags"
-                    :key="tag.id"
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white group/tag relative"
-                    :style="{ backgroundColor: tag.color || '#6B7280' }"
+                    :class="getCollectionStatusClass(host.collection_status)"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    :title="host.collection_status === 'failed' && host.error_message ? host.error_message : ''"
                   >
-                    {{ tag.name }}
+                    <component
+                      :is="getCollectionStatusIcon(host.collection_status)"
+                      class="h-3.5 w-3.5 mr-1"
+                    />
+                    {{ getCollectionStatusText(host.collection_status) }}
+                  </span>
+                </template>
+                <!-- Source -->
+                <template v-else-if="columnKey === 'source'">
+                  <span class="inline-flex items-center">
+                    <component
+                      :is="getSourceIcon(host.source)"
+                      class="h-4 w-4 mr-1"
+                      :class="getSourceIconColor(host.source)"
+                    />
+                    {{ getSourceText(host.source) }}
+                  </span>
+                </template>
+                <!-- Tags -->
+                <template v-else-if="columnKey === 'tags'">
+                  <div class="flex flex-wrap gap-1 items-center">
+                    <span
+                      v-for="tag in host.tags"
+                      :key="tag.id"
+                      class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white group/tag relative"
+                      :style="{ backgroundColor: tag.color || '#6B7280' }"
+                    >
+                      {{ tag.name }}
+                      <button
+                        v-if="host.id"
+                        @click.stop="removeHostTag(host.id, tag.id!)"
+                        class="ml-1 opacity-0 group-hover/tag:opacity-100 hover:bg-black/20 rounded p-0.5 transition-opacity"
+                        :title="$t('hosts.removeTag')"
+                      >
+                        <XMarkIcon class="h-3 w-3" />
+                      </button>
+                    </span>
                     <button
                       v-if="host.id"
-                      @click.stop="removeHostTag(host.id, tag.id!)"
-                      class="ml-1 opacity-0 group-hover/tag:opacity-100 hover:bg-black/20 rounded p-0.5 transition-opacity"
-                      :title="$t('hosts.removeTag')"
+                      @click.stop="showHostTagManagementModal(host)"
+                      class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                      :title="$t('hosts.manageTags')"
                     >
-                      <XMarkIcon class="h-3 w-3" />
+                      <TagIcon class="h-3 w-3 mr-1" />
+                      {{ $t('hosts.manageTags') }}
                     </button>
-                  </span>
-                  <button
-                    v-if="host.id"
-                    @click.stop="showHostTagManagementModal(host)"
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    :title="$t('hosts.manageTags')"
-                  >
-                    <TagIcon class="h-3 w-3 mr-1" />
-                    {{ $t('hosts.manageTags') }}
-                  </button>
-                </div>
-              </td>
-              <td v-if="isColumnVisible('operation')" class="px-4 py-4 whitespace-nowrap text-sm font-medium sticky right-0 bg-white group-hover:bg-gray-50 z-10 transition-colors"
-                  :class="{ 'bg-blue-50 group-hover:bg-blue-100': selectedHosts.includes(host.id!) }"
-                  @click.stop
-              >
-                <div class="flex items-center space-x-1">
-                  <button
-                    v-if="host.id"
-                    @click="viewHost(host.id)"
-                    class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                    :title="$t('hosts.viewDetails')"
-                  >
-                    <EyeIcon class="h-5 w-5" />
-                  </button>
-                  <button
-                    v-if="host.id && host.os_type !== 'VMware ESXi'"
-                    @click="editHost(host)"
-                    class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
-                    :title="$t('common.edit')"
-                  >
-                    <PencilIcon class="h-5 w-5" />
-                  </button>
-                  <button
-                    v-if="host.id && host.os_type !== 'VMware ESXi'"
-                    @click="collectHost(host.id)"
-                    :disabled="host.collection_status === 'collecting'"
-                    class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :title="$t('hosts.collect')"
-                  >
-                    <CpuChipIcon class="h-5 w-5" />
-                  </button>
-                  <button
-                    v-if="host.id"
-                    @click="deleteHost(host.id)"
-                    class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                    :title="$t('common.delete')"
-                  >
-                    <TrashIcon class="h-5 w-5" />
-                  </button>
-                </div>
+                  </div>
+                </template>
+                <!-- Operation -->
+                <template v-else-if="columnKey === 'operation'">
+                  <div class="flex items-center space-x-1">
+                    <button
+                      v-if="host.id"
+                      @click="viewHost(host.id)"
+                      class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                      :title="$t('hosts.viewDetails')"
+                    >
+                      <EyeIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="host.id && host.os_type !== 'VMware ESXi'"
+                      @click="editHost(host)"
+                      class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+                      :title="$t('common.edit')"
+                    >
+                      <PencilIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="host.id && host.os_type !== 'VMware ESXi'"
+                      @click="collectHost(host.id)"
+                      :disabled="host.collection_status === 'collecting'"
+                      class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      :title="$t('hosts.collect')"
+                    >
+                      <CpuChipIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                      v-if="host.id"
+                      @click="deleteHost(host.id)"
+                      class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                      :title="$t('common.delete')"
+                    >
+                      <TrashIcon class="h-5 w-5" />
+                    </button>
+                  </div>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -2145,9 +2189,11 @@ const loadVisibleColumns = (): string[] => {
     const stored = localStorage.getItem(STORAGE_KEY_COLUMNS)
     if (stored) {
       const parsed = JSON.parse(stored)
-      // Ensure required columns are always visible
+      // Ensure required columns are always visible and in correct order
       const required = ['checkbox', 'ip', 'operation']
-      return [...new Set([...required, ...parsed])]
+      // Merge required columns at the beginning, then saved columns, then operation at the end
+      const savedWithoutRequired = parsed.filter((col: string) => !required.includes(col))
+      return ['checkbox', 'ip', ...savedWithoutRequired, 'operation']
     }
   } catch (e) {
     console.warn('Failed to load column preferences:', e)
@@ -2158,19 +2204,20 @@ const loadVisibleColumns = (): string[] => {
 const visibleColumns = ref<string[]>(loadVisibleColumns())
 
 // Save to localStorage when changed, but ensure required columns are always included
-watch(visibleColumns, (newVal) => {
+watch(visibleColumns, (newVal, oldVal) => {
   try {
     // Ensure required columns are always included
     const required = ['checkbox', 'ip', 'operation']
     const filtered = newVal.filter(col => !required.includes(col))
-    const toSave = [...new Set([...required, ...filtered])]
     
     // Only save if the value actually changed (to avoid infinite loops)
-    if (JSON.stringify(toSave.sort()) !== JSON.stringify(newVal.sort())) {
-      visibleColumns.value = toSave
-    } else {
-      localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(filtered))
+    // Check both content and order
+    if (oldVal && JSON.stringify(newVal) === JSON.stringify(oldVal)) {
+      return
     }
+    
+    // Save the filtered columns (required columns are always first)
+    localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(filtered))
   } catch (e) {
     console.warn('Failed to save column preferences:', e)
   }
@@ -2255,10 +2302,6 @@ const groupedColumns = computed(() => {
 // Show grouped view
 const showGroupedView = ref(true)
 
-// Drag and drop state
-const draggedColumn = ref<string | null>(null)
-const dragOverIndex = ref<number | null>(null)
-
 // Visible columns count (excluding required columns for display)
 const visibleColumnsCount = computed(() => {
   const required = ['checkbox', 'ip', 'operation']
@@ -2292,38 +2335,79 @@ const applyTemplate = (template: typeof columnTemplates.value[0]) => {
   visibleColumns.value = [...template.columns]
 }
 
-// Drag and drop handlers
-const handleDragStart = (columnKey: string) => {
-  draggedColumn.value = columnKey
+// Get column label by key
+const getColumnLabel = (key: string): string => {
+  const column = availableColumns.value.find(col => col.key === key)
+  if (!column) return key
+  return column.label
 }
 
-const handleDragOver = (event: DragEvent, index: number) => {
+// Drag and drop handlers for table header
+const draggedHeaderColumn = ref<string | null>(null)
+const dragOverHeaderIndex = ref<number | null>(null)
+
+const handleHeaderDragStart = (event: DragEvent, columnKey: string) => {
+  draggedHeaderColumn.value = columnKey
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', columnKey)
+  }
+  // Add visual feedback
+  if (event.target) {
+    (event.target as HTMLElement).classList.add('opacity-50')
+  }
+}
+
+const handleHeaderDragOver = (event: DragEvent, index: number) => {
   event.preventDefault()
-  dragOverIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  dragOverHeaderIndex.value = index
 }
 
-const handleDragEnd = () => {
-  draggedColumn.value = null
-  dragOverIndex.value = null
+const handleHeaderDragLeave = () => {
+  dragOverHeaderIndex.value = null
 }
 
-const handleDrop = (event: DragEvent, targetIndex: number) => {
+const handleHeaderDragEnd = (event: DragEvent) => {
+  draggedHeaderColumn.value = null
+  dragOverHeaderIndex.value = null
+  // Remove visual feedback
+  if (event.target) {
+    (event.target as HTMLElement).classList.remove('opacity-50')
+  }
+}
+
+const handleHeaderDrop = (event: DragEvent, targetIndex: number) => {
   event.preventDefault()
-  if (!draggedColumn.value) return
+  if (!draggedHeaderColumn.value) return
   
-  const currentIndex = visibleColumns.value.indexOf(draggedColumn.value)
+  const currentIndex = visibleColumns.value.indexOf(draggedHeaderColumn.value)
   if (currentIndex === -1 || currentIndex === targetIndex) {
-    handleDragEnd()
+    handleHeaderDragEnd(event)
+    return
+  }
+  
+  // Reorder columns - preserve required columns position
+  const required = ['checkbox', 'ip', 'operation']
+  const isDraggedRequired = required.includes(draggedHeaderColumn.value)
+  const targetColumn = visibleColumns.value[targetIndex]
+  const isTargetRequired = required.includes(targetColumn)
+  
+  // Don't allow moving required columns
+  if (isDraggedRequired || isTargetRequired) {
+    handleHeaderDragEnd(event)
     return
   }
   
   // Reorder columns
   const newColumns = [...visibleColumns.value]
   newColumns.splice(currentIndex, 1)
-  newColumns.splice(targetIndex, 0, draggedColumn.value)
+  newColumns.splice(targetIndex, 0, draggedHeaderColumn.value)
   visibleColumns.value = newColumns
   
-  handleDragEnd()
+  handleHeaderDragEnd(event)
 }
 
 const searchFields = computed(() => [
