@@ -43,8 +43,8 @@ def get_collection_tasks():
     for task in pagination.items:
         task_dict = task.to_dict()
         host_ids = task.get_host_ids()
-        # Check if this is a platform sync task (negative platform_id in host_ids)
-        if host_ids and len(host_ids) == 1 and host_ids[0] < 0:
+        # Check if this is a platform sync task (first element is negative platform_id)
+        if host_ids and len(host_ids) > 0 and host_ids[0] < 0:
             platform_id = -host_ids[0]
             task_dict['task_type'] = 'platform_sync'
             task_dict['platform_id'] = platform_id
@@ -178,9 +178,18 @@ def get_collection_results(task_id):
             'data': []
         })
     
+    # Filter out negative IDs (platform sync task marker) to get actual host IDs
+    actual_host_ids = [hid for hid in host_ids if hid > 0]
+    
+    if not actual_host_ids:
+        return jsonify({
+            'code': 200,
+            'data': []
+        })
+    
     # Get hosts with collection details
     hosts = Host.query.filter(
-        Host.id.in_(host_ids),
+        Host.id.in_(actual_host_ids),
         Host.deleted_at == None
     ).all()
     
@@ -271,90 +280,137 @@ def get_collection_results(task_id):
     })
 
 
-@bp.route('/<int:task_id>/export', methods=['GET'])
+@bp.route('/<int:task_id>/export/csv', methods=['GET'])
 @jwt_required()
 def export_collection_results(task_id):
     """Export collection results as CSV or Excel"""
-    task = CollectionTask.query.get_or_404(task_id)
-    export_format = request.args.get('format', 'csv').lower()
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # Get host IDs from task
-    host_ids = task.get_host_ids()
-    
-    if not host_ids:
-        return jsonify({
-            'code': 404,
-            'message': 'No hosts in this collection task'
-        }), 404
-    
-    # Get hosts with all details
-    hosts = Host.query.filter(
-        Host.id.in_(host_ids),
-        Host.deleted_at == None
-    ).all()
-    
-    if export_format == 'csv':
-        # Export as CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
+    try:
+        task = CollectionTask.query.get_or_404(task_id)
+        export_format = request.args.get('format', 'csv').lower()
         
-        # Write header
-        writer.writerow([
-            '平台类型', '主机名', 'IP', 'Mac', '操作系统类型', '操作系统版本', '操作系统位数',
-            '操作系统内核', '启动方式', 'CPU', 'CPU核数', '内存(GB)', '剩余内存(GB)',
-            '磁盘数量', '磁盘总容量(GB)', '网卡数量', '虚拟化类型', '虚拟化版本',
-            '采集状态', '最后采集时间'
-        ])
+        # Get host IDs from task
+        host_ids = task.get_host_ids()
+        logger.info(f"Export task {task_id}: host_ids = {host_ids}")
         
-        # Write data
-        for host in hosts:
-            # Get default network interface
-            default_nic = next((nic for nic in host.network_interfaces if nic.is_default), None)
-            if not default_nic and host.network_interfaces:
-                default_nic = host.network_interfaces[0]
+        if not host_ids:
+            return jsonify({
+                'code': 404,
+                'message': 'No hosts in this collection task'
+            }), 404
+        
+        # Filter out negative IDs (platform sync task marker) to get actual host IDs
+        actual_host_ids = [hid for hid in host_ids if hid > 0]
+        logger.info(f"Export task {task_id}: actual_host_ids = {actual_host_ids}")
+        
+        if not actual_host_ids:
+            return jsonify({
+                'code': 404,
+                'message': 'No hosts in this collection task'
+            }), 404
+        
+        # Get hosts with all details (load network_interfaces relationship)
+        from sqlalchemy.orm import selectinload
+        hosts = Host.query.options(
+            selectinload(Host.network_interfaces)
+        ).filter(
+            Host.id.in_(actual_host_ids),
+            Host.deleted_at == None
+        ).all()
+        
+        logger.info(f"Export task {task_id}: found {len(hosts)} hosts")
+        
+        # Debug: check if hosts are loaded
+        if not hosts:
+            return jsonify({
+                'code': 404,
+                'message': 'No hosts found for this collection task'
+            }), 404
+        
+        if export_format == 'csv':
+            # Export as CSV
+            output = io.StringIO()
+            writer = csv.writer(output)
             
-            # Determine platform type
-            platform_type = 'Physical'
-            if host.vt_platform:
-                platform_type = host.vt_platform
-            elif not host.is_physical:
-                platform_type = 'Virtual'
+            # Write header
+            header = [
+                'Platform Type', 'Hostname', 'IP', 'MAC', 'OS Type', 'OS Version', 'OS Bit',
+                'OS Kernel', 'Boot Type', 'CPU Info', 'CPU Cores', 'Memory (GB)', 'Free Memory (GB)',
+                'Disk Count', 'Total Disk Size (GB)', 'Network Count', 'Virtualization Type', 'Virtualization Version',
+                'Collection Status', 'Last Collected At'
+            ]
+            writer.writerow(header)
             
-            writer.writerow([
-                platform_type,
-                host.hostname or '',
-                host.ip or '',
-                default_nic.macaddress if default_nic else (host.mac or ''),
-                host.os_type or '',
-                host.os_version or '',
-                host.os_bit or '',
-                host.os_kernel or '',
-                host.boot_type or '',
-                host.cpu_info or '',
-                host.cpu_cores or 0,
-                host.memory_total or 0,
-                host.memory_free or 0,
-                host.disk_count or 0,
-                host.disk_total_size or 0,
-                host.network_count or 0,
-                host.vt_platform or '',
-                host.vt_platform_ver or '',
-                host.collection_status or 'not_collected',
-                host.last_collected_at.isoformat() if host.last_collected_at else '',
-            ])
-        
-        output.seek(0)
-        return Response(
-            output.getvalue(),
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': f'attachment; filename=collection_task_{task_id}_results.csv'
-            }
-        )
-    else:
-        # For Excel export, would need openpyxl or xlsxwriter
+            # Write data
+            for host in hosts:
+                # Get default network interface
+                default_nic = None
+                if host.network_interfaces:
+                    default_nic = next((nic for nic in host.network_interfaces if nic.is_default), None)
+                    if not default_nic and host.network_interfaces:
+                        default_nic = host.network_interfaces[0]
+                
+                # Get MAC address from network interface or host
+                mac_address = ''
+                if default_nic and default_nic.macaddress:
+                    mac_address = default_nic.macaddress
+                elif host.mac:
+                    mac_address = host.mac
+                
+                # Determine platform type
+                platform_type = 'Physical'
+                if host.vt_platform:
+                    platform_type = host.vt_platform
+                elif host.is_physical is False:
+                    platform_type = 'Virtual'
+                
+                row = [
+                    platform_type,
+                    host.hostname or '',
+                    host.ip or '',
+                    mac_address or '',
+                    host.os_type or '',
+                    host.os_version or '',
+                    host.os_bit or '',
+                    host.os_kernel or '',
+                    host.boot_type or '',
+                    host.cpu_info or '',
+                    host.cpu_cores if host.cpu_cores is not None else 0,
+                    host.memory_total if host.memory_total is not None else 0,
+                    host.memory_free if host.memory_free is not None else 0,
+                    host.disk_count if host.disk_count is not None else 0,
+                    host.disk_total_size if host.disk_total_size is not None else 0,
+                    host.network_count if host.network_count is not None else 0,
+                    host.vt_platform or '',
+                    host.vt_platform_ver or '',
+                    host.collection_status or 'not_collected',
+                    host.last_collected_at.isoformat() if host.last_collected_at else '',
+                ]
+                writer.writerow(row)
+            
+            csv_content = output.getvalue()
+            logger.info(f"Export task {task_id}: CSV content length = {len(csv_content)}, first 200 chars = {csv_content[:200]}")
+            
+            response = Response(
+                csv_content,
+                mimetype='text/csv; charset=utf-8',
+                headers={
+                    'Content-Disposition': f'attachment; filename=collection_task_{task_id}_results.csv'
+                }
+            )
+            return response
+        else:
+            # For Excel export, would need openpyxl or xlsxwriter
+            return jsonify({
+                'code': 400,
+                'message': 'Excel export not implemented yet, use format=csv'
+            }), 400
+    except Exception as e:
+        logger.error(f"Export task {task_id} failed: {e}", exc_info=True)
         return jsonify({
-            'code': 400,
-            'message': 'Excel export not implemented yet, use format=csv'
-        }), 400
+            'code': 500,
+            'message': f'Export failed: {str(e)}'
+        }), 500
 

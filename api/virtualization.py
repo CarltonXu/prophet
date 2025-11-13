@@ -243,8 +243,8 @@ def sync_platform(platform_id):
     # Check if any existing task is for this platform
     for task in existing_tasks:
         host_ids = task.get_host_ids()
-        # Platform sync tasks use negative platform_id to identify them
-        if host_ids and len(host_ids) == 1 and host_ids[0] == -platform_id:
+        # Platform sync tasks use negative platform_id as first element to identify them
+        if host_ids and len(host_ids) > 0 and host_ids[0] == -platform_id:
             return jsonify({
                 'code': 400,
                 'message': 'A sync task for this platform is already running',

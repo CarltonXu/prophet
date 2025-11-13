@@ -377,9 +377,10 @@
                 class="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">{{ $t('hosts.all') }}</option>
-                <option value="linux">Linux</option>
-                <option value="windows">Windows</option>
-                <option value="vmware">VMware</option>
+                <option value="linux">{{ $t('hosts.linux') }}</option>
+                <option value="windows">{{ $t('hosts.windows') }}</option>
+                <option value="VMware ESXi">{{ $t('hosts.vmware') }}</option>
+                <option value="VM">{{ $t('hosts.vm') }}</option>
               </select>
             </div>
             
@@ -393,6 +394,7 @@
               >
                 <option value="">{{ $t('hosts.all') }}</option>
                 <option value="host">{{ $t('hosts.host') }}</option>
+                <option value="vm">{{ $t('hosts.vm') }}</option>
                 <option value="network_device">{{ $t('hosts.networkDevice') }}</option>
               </select>
             </div>

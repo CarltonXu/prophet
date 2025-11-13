@@ -161,7 +161,19 @@ def sync_platform_resources_task(self, collection_task_id: int, platform_id: int
                 esxi_synced_count = [0]  # Use list to allow modification in nested function
                 def tracked_sync_esxi(esxi):
                     try:
-                        original_sync_esxi(esxi)
+                        host_id = original_sync_esxi(esxi)
+                        if host_id:
+                            # Add host ID to task's host_ids
+                            # Keep first element as -platform_id to identify platform sync task
+                            import json
+                            host_ids = task.get_host_ids()
+                            if not host_ids or host_ids[0] >= 0:
+                                # Initialize with platform_id marker if not set
+                                host_ids = [-platform_id]
+                            if host_id not in host_ids:
+                                host_ids.append(host_id)
+                                task.set_host_ids(host_ids)
+                        
                         task.completed_count += 1
                         esxi_synced_count[0] += 1
                         if total_items > 0 and esxi_count > 0:
@@ -184,12 +196,24 @@ def sync_platform_resources_task(self, collection_task_id: int, platform_id: int
                     """Sync VM immediately after collection (real-time sync, thread-safe)"""
                     try:
                         # Sync VM to database (this is thread-safe as each call uses its own session)
-                        original_sync_vm(vm_data)
+                        host_id = original_sync_vm(vm_data)
                         
-                        # Thread-safe update of task progress
+                        # Thread-safe update of task progress and host_ids
                         with sync_lock:
                             # Refresh task from database to get latest state
                             db.session.refresh(task)
+                            
+                            # Add host ID to task's host_ids
+                            if host_id:
+                                import json
+                                host_ids = task.get_host_ids()
+                                if not host_ids or host_ids[0] >= 0:
+                                    # Initialize with platform_id marker if not set
+                                    host_ids = [-platform_id]
+                                if host_id not in host_ids:
+                                    host_ids.append(host_id)
+                                    task.set_host_ids(host_ids)
+                            
                             task.completed_count += 1
                             if total_items > 0:
                                 # Progress: 30% (after ESXi) + 70% * (completed/total)

@@ -24,27 +24,27 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 
 FIELD_CATEGORIES = {
     'basic': {
-        'label': '基本信息',
+        'label': 'Basic Information',
         'label_key': 'hosts.exportCategories.basic'
     },
     'hardware': {
-        'label': '硬件信息',
+        'label': 'Hardware Information',
         'label_key': 'hosts.exportCategories.hardware'
     },
     'storage': {
-        'label': '存储信息',
+        'label': 'Storage Information',
         'label_key': 'hosts.exportCategories.storage'
     },
     'network': {
-        'label': '网络信息',
+        'label': 'Network Information',
         'label_key': 'hosts.exportCategories.network'
     },
     'virtualization': {
-        'label': '虚拟化信息',
+        'label': 'Virtualization Information',
         'label_key': 'hosts.exportCategories.virtualization'
     },
     'status': {
-        'label': '采集状态',
+        'label': 'Collection Status',
         'label_key': 'hosts.exportCategories.status'
     }
 }
@@ -61,23 +61,23 @@ def _bytes_to_gb(value):
 
 FIELD_DEFINITIONS = {
     'platform_type': {
-        'header': '平台类型',
-        'label': '平台类型',
+        'header': 'Platform Type',
+        'label': 'Platform Type',
         'label_key': 'hosts.exportColumns.platformType',
         'category': 'basic',
         'width': 12,
         'align': 'center'
     },
     'hostname': {
-        'header': '主机名',
-        'label': '主机名',
+        'header': 'Hostname',
+        'label': 'Hostname',
         'label_key': 'hosts.exportColumns.hostname',
         'category': 'basic',
         'width': 22
     },
     'vmware_host': {
-        'header': 'VMware主机名',
-        'label': 'VMware主机名',
+        'header': 'VMware Hostname',
+        'label': 'VMware Hostname',
         'label_key': 'hosts.exportColumns.vmwareHostName',
         'category': 'virtualization',
         'width': 24
@@ -97,37 +97,37 @@ FIELD_DEFINITIONS = {
         'width': 20
     },
     'os_type': {
-        'header': '操作系统类型',
-        'label': '操作系统类型',
+        'header': 'Operating System Type',
+        'label': 'Operating System Type',
         'label_key': 'hosts.exportColumns.osType',
         'category': 'basic',
         'width': 18
     },
     'os_version': {
-        'header': '操作系统版本',
-        'label': '操作系统版本',
+        'header': 'Operating System Version',
+        'label': 'Operating System Version',
         'label_key': 'hosts.exportColumns.osVersion',
         'category': 'basic',
         'width': 28
     },
     'os_bit': {
-        'header': '操作系统位数',
-        'label': '操作系统位数',
+        'header': 'Operating System Bitness',
+        'label': 'Operating System Bitness',
         'label_key': 'hosts.exportColumns.osBit',
         'category': 'basic',
         'width': 12,
         'align': 'center'
     },
     'os_kernel': {
-        'header': '操作系统内核',
-        'label': '操作系统内核',
+        'header': 'Operating System Kernel',
+        'label': 'Operating System Kernel',
         'label_key': 'hosts.exportColumns.osKernel',
         'category': 'basic',
         'width': 20
     },
     'boot_type': {
-        'header': '启动方式',
-        'label': '启动方式',
+        'header': 'Boot Method',
+        'label': 'Boot Method',
         'label_key': 'hosts.exportColumns.bootType',
         'category': 'basic',
         'width': 12,
@@ -141,116 +141,116 @@ FIELD_DEFINITIONS = {
         'width': 32
     },
     'cpu_cores': {
-        'header': 'CPU核数',
-        'label': 'CPU核数',
+        'header': 'CPU Cores',
+        'label': 'CPU Cores',
         'label_key': 'hosts.exportColumns.cpuCores',
         'category': 'hardware',
         'width': 12,
         'align': 'center'
     },
     'memory_label': {
-        'header': '内存',
-        'label': '内存',
+        'header': 'Memory',
+        'label': 'Memory',
         'label_key': 'hosts.exportColumns.memoryLabel',
         'category': 'hardware',
         'width': 18
     },
     'memory_total_gb': {
-        'header': '总内存(GB)',
-        'label': '总内存(GB)',
+        'header': 'Total Memory (GB)',
+        'label': 'Total Memory (GB)',
         'label_key': 'hosts.exportColumns.memoryTotal',
         'category': 'hardware',
         'width': 16,
         'align': 'center'
     },
     'memory_free_gb': {
-        'header': '剩余内存(GB)',
-        'label': '剩余内存(GB)',
+        'header': 'Free Memory (GB)',
+        'label': 'Free Memory (GB)',
         'label_key': 'hosts.exportColumns.memoryFree',
         'category': 'hardware',
         'width': 18,
         'align': 'center'
     },
     'disk_count': {
-        'header': '磁盘数量',
-        'label': '磁盘数量',
+        'header': 'Disk Count',
+        'label': 'Disk Count',
         'label_key': 'hosts.exportColumns.diskCount',
         'category': 'storage',
         'width': 12,
         'align': 'center'
     },
     'disk_total_size_gb': {
-        'header': '磁盘总容量(GB)',
-        'label': '磁盘总容量(GB)',
+        'header': 'Total Disk Capacity (GB)',
+        'label': 'Total Disk Capacity (GB)',
         'label_key': 'hosts.exportColumns.diskTotalSize',
         'category': 'storage',
         'width': 18,
         'align': 'center'
     },
     'disks': {
-        'header': '磁盘信息',
-        'label': '磁盘信息',
+        'header': 'Disk Details',
+        'label': 'Disk Details',
         'label_key': 'hosts.exportColumns.disks',
         'category': 'storage',
         'width': 55,
         'wrap': True
     },
     'partitions': {
-        'header': '分区信息',
-        'label': '分区信息',
+        'header': 'Partition Details',
+        'label': 'Partition Details',
         'label_key': 'hosts.exportColumns.partitions',
         'category': 'storage',
         'width': 55,
         'wrap': True
     },
     'network_count': {
-        'header': '网卡数量',
-        'label': '网卡数量',
+        'header': 'Network Interface Count',
+        'label': 'Network Interface Count',
         'label_key': 'hosts.exportColumns.networkCount',
         'category': 'network',
         'width': 12,
         'align': 'center'
     },
     'networks': {
-        'header': '网卡信息',
-        'label': '网卡信息',
+        'header': 'Network Interface Details',
+        'label': 'Network Interface Details',
         'label_key': 'hosts.exportColumns.networkInterfaces',
         'category': 'network',
         'width': 60,
         'wrap': True
     },
     'vt_platform': {
-        'header': '虚拟化类型',
-        'label': '虚拟化类型',
+        'header': 'Virtualization Platform',
+        'label': 'Virtualization Platform',
         'label_key': 'hosts.exportColumns.vtPlatform',
         'category': 'virtualization',
         'width': 20
     },
     'vt_platform_ver': {
-        'header': '虚拟化版本',
-        'label': '虚拟化版本',
+        'header': 'Virtualization Version',
+        'label': 'Virtualization Version',
         'label_key': 'hosts.exportColumns.vtPlatformVersion',
         'category': 'virtualization',
         'width': 20
     },
     'esxi_host': {
-        'header': 'ESXi服务器',
-        'label': 'ESXi服务器',
+        'header': 'ESXi Host',
+        'label': 'ESXi Host',
         'label_key': 'hosts.exportColumns.esxiHost',
         'category': 'virtualization',
         'width': 25
     },
     'collection_status': {
-        'header': '采集状态',
-        'label': '采集状态',
+        'header': 'Collection Status',
+        'label': 'Collection Status',
         'label_key': 'hosts.exportColumns.collectionStatus',
         'category': 'status',
         'width': 16,
         'align': 'center'
     },
     'last_collected_at': {
-        'header': '最后采集时间',
-        'label': '最后采集时间',
+        'header': 'Last Collection Time',
+        'label': 'Last Collection Time',
         'label_key': 'hosts.exportColumns.lastCollectedAt',
         'category': 'status',
         'width': 22
@@ -259,9 +259,9 @@ FIELD_DEFINITIONS = {
 
 EXPORT_TEMPLATES = {
     'summary': {
-        'name': '概要模板',
+        'name': 'Summary Template',
         'name_key': 'hosts.exportTemplates.summary',
-        'description': '包含关键基础信息，适合快速预览',
+        'description': 'Includes key basic information for quick review',
         'description_key': 'hosts.exportTemplates.summaryDesc',
         'fields': [
             'platform_type', 'hostname', 'ip', 'os_type', 'cpu_info', 'cpu_cores',
@@ -269,9 +269,9 @@ EXPORT_TEMPLATES = {
         ]
     },
     'detailed': {
-        'name': '详细模板',
+        'name': 'Detailed Template',
         'name_key': 'hosts.exportTemplates.detailed',
-        'description': '包含硬件、存储和网络详细信息',
+        'description': 'Includes detailed hardware, storage, and network information',
         'description_key': 'hosts.exportTemplates.detailedDesc',
         'fields': [
             'platform_type', 'hostname', 'vmware_host', 'ip', 'mac',
@@ -283,9 +283,9 @@ EXPORT_TEMPLATES = {
         ]
     },
     'all': {
-        'name': '全部字段',
+        'name': 'All Fields',
         'name_key': 'hosts.exportTemplates.all',
-        'description': '导出所有支持的字段',
+        'description': 'Exports all supported fields',
         'description_key': 'hosts.exportTemplates.allDesc',
         'fields': list(FIELD_DEFINITIONS.keys())
     }
@@ -368,7 +368,7 @@ HOST_IMPORT_TEMPLATE_COLUMNS = [
         'label_key': 'hosts.importFields.isPhysical',
         'description_key': 'hosts.importFields.isPhysicalDesc',
         'required': False,
-        'example': '是/否'
+        'example': 'Yes/No'
     },
     {
         'key': 'vt_platform',
@@ -424,7 +424,7 @@ HOST_IMPORT_TEMPLATE_COLUMNS = [
         'label_key': 'hosts.importFields.tags',
         'description_key': 'hosts.importFields.tagsDesc',
         'required': False,
-        'example': '生产,web'
+        'example': 'production,web'
     },
 ]
 
@@ -473,6 +473,8 @@ def get_hosts():
             )
     
     if os_type:
+        # Strip whitespace to handle any trailing/leading spaces from frontend
+        os_type = os_type.strip()
         query = query.filter_by(os_type=os_type)
     
     if device_type:
@@ -1222,7 +1224,7 @@ def export_hosts_csv():
                 elif key == 'device_type':
                     value = host.device_type or ''
                 elif key == 'is_physical':
-                    value = '是' if host.is_physical else '否'
+                    value = 'Yes' if host.is_physical else 'No'
                 elif key == 'vt_platform':
                     value = host.vt_platform or ''
                 elif key == 'vt_platform_ver':
@@ -1268,14 +1270,14 @@ def export_hosts_csv():
     writer = csv.writer(output)
     
     header = [
-        'ID', '主机名', 'IP', 'Mac', '厂商', '操作系统类型', '操作系统版本', '操作系统内核',
-        '操作系统位数', '启动方式', 'CPU信息', 'CPU核数', '内存(GB)', '剩余内存(GB)',
-        '磁盘数量', '磁盘总容量(GB)', '网卡数量', '设备类型', '是否物理机', '虚拟化平台',
-        '虚拟化版本', '来源', '采集状态', '最后采集时间'
+        'ID', 'Hostname', 'IP', 'MAC', 'Vendor', 'OS Type', 'OS Version', 'OS Kernel',
+        'OS Bit', 'Boot Type', 'CPU Info', 'CPU Cores', 'Memory (GB)', 'Free Memory (GB)',
+        'Disk Count', 'Total Disk Size (GB)', 'Network Count', 'Device Type', 'Is Physical', 'Virtualization Platform',
+        'Virtualization Version', 'Source', 'Collection Status', 'Last Collected At'
     ]
     
     if include_credentials:
-        header.extend(['用户名', '密码', 'SSH端口', '密钥路径'])
+        header.extend(['Username', 'Password', 'SSH Port', 'Key Path'])
     
     writer.writerow(header)
     
@@ -1299,7 +1301,7 @@ def export_hosts_csv():
             host.disk_total_size or 0,
             host.network_count or 0,
             host.device_type or '',
-            '是' if host.is_physical else '否',
+            'Yes' if host.is_physical else 'No',
             host.vt_platform or '',
             host.vt_platform_ver or '',
             host.source or 'manual',
@@ -1371,6 +1373,7 @@ def _apply_host_filters(query, filters):
             )
     
     if os_type:
+        os_type = os_type.strip()
         query = query.filter_by(os_type=os_type)
     
     if device_type:

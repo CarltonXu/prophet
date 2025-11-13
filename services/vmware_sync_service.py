@@ -295,6 +295,9 @@ class VMwareSyncService:
             db.session.commit()
             logger.info(f"Successfully synced ESXi host {esxi_name} to database (host.id={host.id}, ip={host.ip})")
             
+            # Return host ID for task tracking
+            return host.id
+            
         except Exception as e:
             esxi_name = esxi.get('name', 'unknown')
             error_msg = str(e)
@@ -308,6 +311,7 @@ class VMwareSyncService:
                 'ip': esxi.get('info', {}).get('ip') or esxi.get('info', {}).get('managementIp') or esxi_name,
                 'error': error_msg
             })
+            return None  # Return None on failure
     
     def _sync_vm(self, vm_info: Dict):
         """Sync VM to database using Parser"""
@@ -471,6 +475,9 @@ class VMwareSyncService:
             db.session.commit()
             logger.info(f"Successfully synced VM {vm_name} to database (host.id={host.id})")
             
+            # Return host ID for task tracking
+            return host.id
+            
         except Exception as e:
             vm_name = vm_info.get('name', 'unknown')
             vm_ip = vm_info.get('ipAddress', '')
@@ -485,4 +492,5 @@ class VMwareSyncService:
                 'ip': vm_ip,
                 'error': error_msg
             })
+            return None  # Return None on failure
 

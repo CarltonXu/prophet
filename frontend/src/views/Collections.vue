@@ -642,8 +642,10 @@ const exportTaskResults = async (id: number) => {
   try {
     const response = await collectionsApi.exportCollectionResultsCSV(id)
     
-    // Create blob and download
-    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+    // Response interceptor already returns response.data, so response is already a Blob
+    const blob = response instanceof Blob
+      ? response
+      : new Blob([response], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
@@ -652,6 +654,7 @@ const exportTaskResults = async (id: number) => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
     
     toastStore.success(t('collections.exportSuccess'))
   } catch (error: any) {

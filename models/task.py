@@ -81,19 +81,27 @@ class CollectionTask(db.Model):
         """Convert to dictionary"""
         # Calculate total count
         host_ids = self.get_host_ids()
-        if host_ids and len(host_ids) == 1 and host_ids[0] < 0:
-            # Platform sync task - estimate total from progress
-            total_count = None
-            done = self.completed_count + self.failed_count
-            if self.progress > 0 and done > 0:
-                # Estimate total from progress: done / progress = total
-                # Round up to ensure we don't show less than actual
-                estimated_total = int(done / (self.progress / 100.0))
-                # Use the larger of estimated or done (to handle rounding errors)
-                total_count = max(estimated_total, done)
-            elif self.status in ['completed', 'failed'] and done > 0:
-                # If task is done, total is at least completed + failed
-                total_count = done
+        # Check if this is a platform sync task (first element is negative platform_id)
+        if host_ids and len(host_ids) > 0 and host_ids[0] < 0:
+            # Platform sync task - count actual host IDs (excluding the negative platform_id marker)
+            # Filter out negative IDs to get actual host IDs
+            actual_host_ids = [hid for hid in host_ids if hid > 0]
+            if actual_host_ids:
+                # Use actual host count if available
+                total_count = len(actual_host_ids)
+            else:
+                # If no actual hosts yet, estimate from progress
+                total_count = None
+                done = self.completed_count + self.failed_count
+                if self.progress > 0 and done > 0:
+                    # Estimate total from progress: done / progress = total
+                    # Round up to ensure we don't show less than actual
+                    estimated_total = int(done / (self.progress / 100.0))
+                    # Use the larger of estimated or done (to handle rounding errors)
+                    total_count = max(estimated_total, done)
+                elif self.status in ['completed', 'failed'] and done > 0:
+                    # If task is done, total is at least completed + failed
+                    total_count = done
         else:
             # Collection task - total is from host_ids
             total_count = len(host_ids) if host_ids else 0

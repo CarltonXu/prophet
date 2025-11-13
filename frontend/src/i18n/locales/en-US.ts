@@ -2,6 +2,7 @@ export default {
   common: {
     refresh: 'Refresh',
     loading: 'Loading...',
+    select: 'Select',
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -143,6 +144,10 @@ export default {
     collectionError: 'Collection Error',
     deviceType: 'Device Type',
     host: 'Host',
+    vm: 'Virtual Machine',
+    linux: 'Linux',
+    windows: 'Windows',
+    vmware: 'VMware ESXi',
     cpuCores: 'CPU Cores',
     memory: 'Memory (GB)',
     disk: 'Disk (GB)',

@@ -2,6 +2,7 @@ export default {
   common: {
     refresh: '刷新',
     loading: '加载中...',
+    select: '选择',
     save: '保存',
     cancel: '取消',
     delete: '删除',
@@ -143,6 +144,10 @@ export default {
     collectionError: '采集错误',
     deviceType: '设备类型',
     host: '主机',
+    vm: '虚拟机',
+    linux: 'Linux',
+    windows: 'Windows',
+    vmware: 'VMware ESXi',
     cpuCores: 'CPU核心',
     memory: '内存(GB)',
     disk: '磁盘(GB)',
