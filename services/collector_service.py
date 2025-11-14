@@ -33,11 +33,38 @@ class CollectorService:
         self._cached_host_ids = None
         self._cached_total = None
     
+    def _commit_with_retry(self, max_retries: int = 3, retry_delay: float = 0.1):
+        """Commit database changes with retry on lock errors"""
+        import time
+        from sqlalchemy.orm.exc import StaleDataError
+        
+        for attempt in range(max_retries):
+            try:
+                db.session.commit()
+                return True
+            except Exception as e:
+                error_str = str(e)
+                is_locked = 'database is locked' in error_str.lower() or 'locked' in error_str.lower()
+                is_stale = isinstance(e, StaleDataError) or 'staledataerror' in error_str.lower() or 'expected to update' in error_str.lower()
+                
+                if (is_locked or is_stale) and attempt < max_retries - 1:
+                    error_type = "locked" if is_locked else "stale data"
+                    logger.warning(f"Database {error_type} in commit (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
+                    db.session.rollback()
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    logger.error(f"Failed to commit after {max_retries} attempts: {e}")
+                    db.session.rollback()
+                    raise
+    
     def update_progress(self, completed: int = None, failed: int = None, running: int = None):
         """Update collection task progress"""
         import time
         import json
-        max_retries = 3
+        from sqlalchemy.orm.exc import StaleDataError
+        max_retries = 5
         retry_delay = 0.1
         
         for attempt in range(max_retries):
@@ -48,21 +75,29 @@ class CollectorService:
                 except Exception:
                     pass
                 
-                # Refresh task to get latest state
-                db.session.refresh(self.collection_task)
+                # Always re-query the task to get the latest state from database
+                # This avoids StaleDataError when multiple processes update the same task
+                collection_task = CollectionTask.query.get(self.collection_task_id)
+                if not collection_task:
+                    logger.warning(f"Collection task {self.collection_task_id} not found, skipping progress update")
+                    return
                 
+                # Use merge to ensure the object is in the session
+                collection_task = db.session.merge(collection_task)
+                
+                # Update fields if provided
                 if completed is not None:
-                    self.collection_task.completed_count = completed
+                    collection_task.completed_count = completed
                 if failed is not None:
-                    self.collection_task.failed_count = failed
+                    collection_task.failed_count = failed
                 if running is not None:
-                    self.collection_task.current_running = running
+                    collection_task.current_running = running
                 
                 # Calculate progress based on actual task hosts
                 # Use cached total or read directly from column to avoid triggering autoflush
                 if self._cached_total is None:
                     # Read host_ids directly from column without triggering any lazy loading
-                    host_ids_str = self.collection_task.host_ids
+                    host_ids_str = collection_task.host_ids
                     if host_ids_str:
                         try:
                             host_ids = json.loads(host_ids_str)
@@ -77,21 +112,42 @@ class CollectorService:
                 
                 total = self._cached_total
                 if total > 0:
-                    done = self.collection_task.completed_count + self.collection_task.failed_count
-                    self.collection_task.progress = int(done / total * 100)
+                    done = collection_task.completed_count + collection_task.failed_count
+                    collection_task.progress = int(done / total * 100)
                 else:
-                    self.collection_task.progress = 0
+                    collection_task.progress = 0
                 
-                db.session.commit()
+                # Use no_autoflush to prevent premature flushes that might cause conflicts
+                with db.session.no_autoflush:
+                    db.session.commit()
+                
+                # Update cached reference
+                self.collection_task = collection_task
                 return  # Success, exit retry loop
                 
+            except StaleDataError as e:
+                # Task was modified or deleted by another process
+                if attempt < max_retries - 1:
+                    logger.warning(f"StaleDataError in update_progress (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
+                    db.session.rollback()
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    logger.error(f"StaleDataError in update_progress after {max_retries} attempts: {e}")
+                    db.session.rollback()
+                    # Don't raise, just log - progress update is not critical
+                    return
+                    
             except Exception as e:
                 error_str = str(e)
                 is_locked = 'database is locked' in error_str.lower() or 'locked' in error_str.lower()
+                is_stale = 'staledataerror' in error_str.lower() or 'expected to update' in error_str.lower()
                 
-                if is_locked and attempt < max_retries - 1:
-                    # Database locked, retry after delay
-                    logger.warning(f"Database locked in update_progress (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
+                if (is_locked or is_stale) and attempt < max_retries - 1:
+                    # Database locked or stale data, retry after delay
+                    error_type = "locked" if is_locked else "stale data"
+                    logger.warning(f"Database {error_type} in update_progress (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
                     db.session.rollback()
                     time.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
@@ -100,7 +156,8 @@ class CollectorService:
                     # Other error or max retries reached
                     logger.error(f"Failed to update progress: {e}")
                     db.session.rollback()
-                    raise
+                    # Don't raise for progress updates - they're not critical
+                    return
     
     def collect_hosts(self, concurrent_limit: int = None):
         """Collect hosts with concurrent execution"""

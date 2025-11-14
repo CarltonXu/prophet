@@ -264,11 +264,14 @@ class CollectionParserService:
                 return  # Success, exit retry loop
                 
             except Exception as e:
+                from sqlalchemy.orm.exc import StaleDataError
                 error_str = str(e)
                 is_locked = 'database is locked' in error_str.lower() or 'locked' in error_str.lower()
+                is_stale = isinstance(e, StaleDataError) or 'staledataerror' in error_str.lower() or 'expected to update' in error_str.lower()
                 
-                if is_locked and attempt < max_retries - 1:
-                    logger.warning(f"Database locked (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
+                if (is_locked or is_stale) and attempt < max_retries - 1:
+                    error_type = "locked" if is_locked else "stale data"
+                    logger.warning(f"Database {error_type} in update_host_from_parsed_data (attempt {attempt + 1}/{max_retries}), retrying after {retry_delay}s...")
                     db.session.rollback()
                     time.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
@@ -280,10 +283,14 @@ class CollectionParserService:
                     logger.error(traceback.format_exc())
                     try:
                         db.session.rollback()
-                        host.collection_status = 'failed'
-                        db.session.commit()
-                    except Exception:
-                        pass
+                        # Re-query host to ensure we have the latest state
+                        host = Host.query.get(host_id)
+                        if host:
+                            host.collection_status = 'failed'
+                            db.session.commit()
+                    except Exception as commit_error:
+                        logger.error(f"Failed to update host status after error: {commit_error}")
+                        db.session.rollback()
                     raise
     
     def _update_disks(self, host: Host, disks_info: Dict[str, Any]) -> None:
