@@ -325,7 +325,7 @@
                 <div
                   v-if="showEdgeStyleMenu"
                   @click.stop
-                  class="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50 edge-style-menu-container divide-y divide-gray-100"
+                  class="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-[10000] edge-style-menu-container divide-y divide-gray-100"
                 >
                   <div class="p-4 space-y-4">
                     <!-- Edge Type -->
