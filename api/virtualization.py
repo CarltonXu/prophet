@@ -81,7 +81,7 @@ def get_platform(platform_id):
     # ESXi hosts have: source_platform_id=platform_id, device_type='host', is_physical=False
     esxi_count = Host.query.filter(
         Host.source_platform_id == platform_id,
-        Host.device_type == 'host',
+        Host.os_type == 'VMware ESXi',
         Host.is_physical == False,
         Host.deleted_at == None
     ).count()
