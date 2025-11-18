@@ -507,6 +507,8 @@ export default {
     retrySuccess: 'Task restarted',
     deleteSuccess: 'Task deleted',
     exportSuccess: 'Export successful',
+    filterPlaceholder: 'Search by IP, hostname, status or error message...',
+    noFilteredResults: 'No matching results',
   },
   platforms: {
     title: 'Virtualization Platforms',

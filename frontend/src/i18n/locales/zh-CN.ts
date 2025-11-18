@@ -507,6 +507,8 @@ export default {
     retrySuccess: '任务已重新启动',
     deleteSuccess: '任务已删除',
     exportSuccess: '导出成功',
+    filterPlaceholder: '搜索 IP、主机名、状态或错误信息...',
+    noFilteredResults: '没有匹配的搜索结果',
   },
   platforms: {
     title: '虚拟化平台',

@@ -233,7 +233,7 @@
 
         <!-- Table Container with Fixed Header -->
         <div class="border border-gray-200 rounded-lg overflow-hidden">
-          <div class="max-h-[60vh] overflow-y-auto">
+          <div class="max-h-[50vh] overflow-y-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>

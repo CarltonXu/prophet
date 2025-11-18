@@ -190,7 +190,7 @@
     </div>
 
     <!-- Task Details Modal -->
-    <Modal :open="showDetailModal" @close="closeDetailModal" :title="$t('collections.taskDetails')" max-width="2xl">
+    <Modal :open="showDetailModal" @close="closeDetailModal" :title="$t('collections.taskDetails')" max-width="6xl">
       <div v-if="taskDetail" class="space-y-6">
         <!-- Task Info -->
         <div class="grid grid-cols-2 gap-4">
@@ -287,79 +287,96 @@
         
         <!-- Results Table -->
         <div>
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ $t('collections.collectionResults') }}
-            <span class="text-sm font-normal text-gray-500 ml-2">
-              ({{ $t('collections.totalHosts', { count: taskDetail.total_count || 0 }) }})
-            </span>
-          </h3>
-          <div v-if="taskResults.length === 0" class="text-center py-8 text-gray-500">
-            <DocumentTextIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
-            <p>{{ $t('collections.noResults') }}</p>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">
+              {{ $t('collections.collectionResults') }}
+              <span class="text-sm font-normal text-gray-500 ml-2">
+                ({{ $t('collections.totalHosts', { count: filteredResults.length }) }})
+              </span>
+            </h3>
           </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('collections.hostIP') }}</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('collections.hostname') }}</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.status') }}</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('collections.errorMessage') }}</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.operation') }}</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="result in taskResults" :key="result.id" class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ result.ip }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ result.hostname || '-' }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <span
-                      v-if="result.collection_status === 'completed' || result.collection_success === true"
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                    >
-                      <CheckCircleIcon class="h-3.5 w-3.5 mr-1" />
-                      {{ $t('common.completed') }}
-                    </span>
-                    <span
-                      v-else-if="result.collection_status === 'failed' || result.collection_success === false"
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                    >
-                      <XCircleIcon class="h-3.5 w-3.5 mr-1" />
-                      {{ $t('common.failed') }}
-                    </span>
-                    <span
-                      v-else-if="result.collection_status === 'collecting'"
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
-                    >
-                      <ArrowPathIcon class="h-3.5 w-3.5 mr-1 animate-spin" />
-                      {{ $t('hosts.collecting') }}
-                    </span>
-                    <span
-                      v-else
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                    >
-                      <ClockIcon class="h-3.5 w-3.5 mr-1" />
-                      {{ $t('common.pending') }}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-sm text-red-600 max-w-md">
-                    <div v-if="(result.collection_status === 'failed' || result.collection_success === false) && result.error_message" class="truncate" :title="result.error_message">
-                      {{ result.error_message.split('\n')[0].substring(0, 80) }}{{ result.error_message.split('\n')[0].length > 80 ? '...' : '' }}
-                    </div>
-                    <span v-else class="text-gray-400">-</span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      v-if="result"
-                      @click="viewHostDetails(result)"
-                      class="text-blue-600 hover:text-blue-900"
-                    >
-                      {{ $t('collections.viewHostDetails') }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          
+          <!-- Filter Input -->
+          <div class="relative mb-4">
+            <input
+              v-model="filterText"
+              type="text"
+              :placeholder="$t('collections.filterPlaceholder')"
+              class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <MagnifyingGlassIcon class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+          </div>
+
+          <!-- Table Container with Fixed Header -->
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div v-if="filteredResults.length === 0" class="text-center py-8 text-gray-500">
+              <DocumentTextIcon class="h-12 w-12 mx-auto text-gray-300 mb-2" />
+              <p>{{ filterText ? $t('collections.noFilteredResults') : $t('collections.noResults') }}</p>
+            </div>
+            <div v-else class="max-h-[50vh] overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.hostIP') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.hostname') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">{{ $t('collections.errorMessage') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.operation') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="result in filteredResults" :key="result.id" class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">{{ result.ip }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.hostname || '-' }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                      <span
+                        v-if="result.collection_status === 'completed' || result.collection_success === true"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                      >
+                        <CheckCircleIcon class="h-3.5 w-3.5 mr-1" />
+                        {{ $t('common.completed') }}
+                      </span>
+                      <span
+                        v-else-if="result.collection_status === 'failed' || result.collection_success === false"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                      >
+                        <XCircleIcon class="h-3.5 w-3.5 mr-1" />
+                        {{ $t('common.failed') }}
+                      </span>
+                      <span
+                        v-else-if="result.collection_status === 'collecting'"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                      >
+                        <ArrowPathIcon class="h-3.5 w-3.5 mr-1 animate-spin" />
+                        {{ $t('hosts.collecting') }}
+                      </span>
+                      <span
+                        v-else
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                      >
+                        <ClockIcon class="h-3.5 w-3.5 mr-1" />
+                        {{ $t('common.pending') }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-red-600">
+                      <div v-if="(result.collection_status === 'failed' || result.collection_success === false) && result.error_message" class="truncate" :title="result.error_message">
+                        {{ result.error_message.split('\n')[0].substring(0, 100) }}{{ result.error_message.split('\n')[0].length > 100 ? '...' : '' }}
+                      </div>
+                      <span v-else class="text-gray-400">-</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                      <button
+                        v-if="result"
+                        @click="viewHostDetails(result)"
+                        class="text-blue-600 hover:text-blue-900"
+                      >
+                        {{ $t('collections.viewHostDetails') }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -386,7 +403,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { collectionsApi, type CollectionTask } from '@/api/collections'
 import Modal from '@/components/Modal.vue'
@@ -408,6 +425,7 @@ import {
   ClockIcon,
   PlayIcon,
   DocumentTextIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/vue/24/outline'
 
 const toastStore = useToastStore()
@@ -425,6 +443,7 @@ const confirmMessage = ref('')
 const confirmAction = ref<(() => void) | null>(null)
 const selectedTaskId = ref<number | null>(null)
 const perPage = ref(10)
+const filterText = ref('')
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -586,11 +605,32 @@ const stopPollingForTask = () => {
   }
 }
 
+// Computed property for filtered results
+const filteredResults = computed(() => {
+  if (!filterText.value.trim()) {
+    return taskResults.value
+  }
+  const searchTerm = filterText.value.toLowerCase()
+  return taskResults.value.filter((result: any) => {
+    return (
+      result.ip?.toLowerCase().includes(searchTerm) ||
+      result.hostname?.toLowerCase().includes(searchTerm) ||
+      result.collection_status?.toLowerCase().includes(searchTerm) ||
+      result.error_message?.toLowerCase().includes(searchTerm) ||
+      (result.collection_status === 'completed' && t('common.completed').toLowerCase().includes(searchTerm)) ||
+      (result.collection_status === 'failed' && t('common.failed').toLowerCase().includes(searchTerm)) ||
+      (result.collection_status === 'collecting' && t('hosts.collecting').toLowerCase().includes(searchTerm)) ||
+      (result.collection_status === 'pending' && t('common.pending').toLowerCase().includes(searchTerm))
+    )
+  })
+})
+
 const closeDetailModal = () => {
   showDetailModal.value = false
   stopPollingForTask()
   taskDetail.value = null
   taskResults.value = []
+  filterText.value = ''
 }
 
 const cancelTask = (id: number) => {
@@ -640,7 +680,7 @@ const deleteTask = (id: number) => {
 
 const exportTaskResults = async (id: number) => {
   try {
-    const response = await collectionsApi.exportCollectionResultsCSV(id)
+    const response: any = await collectionsApi.exportCollectionResultsCSV(id)
     
     // Response interceptor already returns response.data, so response is already a Blob
     const blob = response instanceof Blob
