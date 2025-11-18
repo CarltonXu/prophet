@@ -1121,7 +1121,7 @@
     </Modal>
 
     <!-- Host Details Modal -->
-    <Modal :open="showDetailModal" @close="closeDetailModal" :title="$t('hosts.hostDetails')" max-width="4xl">
+    <Modal :open="showDetailModal" @close="closeDetailModal" :title="$t('hosts.hostDetails')" max-width="6xl">
       <div v-if="hostDetail" class="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
         <!-- Basic Information -->
           <div>
@@ -1187,9 +1187,10 @@
             <GlobeAltIcon class="h-4 w-4 mr-2" />
             {{ $t('hosts.networkInterfaces') }}
           </h3>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="max-h-[50vh] overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.interface') }}</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.macAddress') }}</th>
@@ -1219,6 +1220,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
         
@@ -1228,9 +1230,10 @@
             <CircleStackIcon class="h-4 w-4 mr-2" />
             {{ $t('hosts.disks') }}
           </h3>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="max-h-[50vh] overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.device') }}</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.vendor') }}</th>
@@ -1247,6 +1250,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
         
@@ -1256,9 +1260,10 @@
             <Squares2X2Icon class="h-4 w-4 mr-2" />
             {{ $t('hosts.partitions') }}
           </h3>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="max-h-[50vh] overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.device') }}</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.filesystem') }}</th>
@@ -1290,6 +1295,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
         
@@ -1575,7 +1581,7 @@
       :open="showExportModal"
       @close="closeExportModal"
       :title="$t('hosts.exportModalTitle')"
-      max-width="4xl"
+      max-width="6xl"
     >
       <div v-if="exportConfigLoading" class="py-10">
         <LoadingOverlay :loading="true" :text="$t('hosts.loadingExportConfig')" />
@@ -1619,7 +1625,7 @@
               {{ $t('hosts.exportSelectAllFields') }}
             </button>
           </div>
-          <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+          <div class="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
             <div
               v-for="category in exportFieldsByCategory"
               :key="category.id"
@@ -1818,7 +1824,7 @@
       :open="showDataImportModal"
       @close="closeDataImportModal"
       :title="$t('hosts.dataImportTitle')"
-      max-width="3xl"
+      max-width="6xl"
     >
       <div v-if="importMetadataLoading" class="py-12">
         <LoadingOverlay :loading="true" :text="$t('hosts.loadingImportMetadata')" />
@@ -1954,9 +1960,10 @@
             <div class="px-3 py-2 border-b border-yellow-200">
               <p class="text-xs font-semibold text-yellow-800">{{ $t('hosts.importErrorsTitle') }}</p>
             </div>
-            <div class="max-h-48 overflow-auto">
-              <table class="min-w-full divide-y divide-yellow-200 text-xs">
-                <thead class="bg-yellow-100">
+            <div class="border border-yellow-200 rounded-lg overflow-hidden">
+              <div class="max-h-[50vh] overflow-y-auto">
+                <table class="min-w-full divide-y divide-yellow-200 text-xs">
+                  <thead class="bg-yellow-100 sticky top-0 z-10">
                   <tr>
                     <th class="px-3 py-2 text-left font-medium text-yellow-800 whitespace-nowrap">{{ $t('hosts.importErrorRow') }}</th>
                     <th class="px-3 py-2 text-left font-medium text-yellow-800 whitespace-nowrap">{{ $t('hosts.importErrorIp') }}</th>
@@ -1974,6 +1981,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </section>
