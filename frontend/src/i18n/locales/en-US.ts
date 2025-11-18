@@ -199,6 +199,7 @@ export default {
     notCollected: 'Not Collected',
     collecting: 'Collecting',
     completed: 'Completed',
+    viewError: 'View Error',
     scan: 'Scan',
     platform: 'Platform',
     manual: 'Manual',
@@ -512,6 +513,7 @@ export default {
     exportSuccess: 'Export successful',
     filterPlaceholder: 'Search by IP, hostname, status or error message...',
     noFilteredResults: 'No matching results',
+    viewError: 'View Error',
   },
   platforms: {
     title: 'Virtualization Platforms',

@@ -320,7 +320,7 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.hostIP') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('collections.hostname') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.status') }}</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">{{ $t('collections.errorMessage') }}</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style="min-width: 250px; max-width: 400px;">{{ $t('collections.errorMessage') }}</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.operation') }}</th>
                   </tr>
                 </thead>
@@ -358,9 +358,31 @@
                         {{ $t('common.pending') }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-sm text-red-600">
-                      <div v-if="(result.collection_status === 'failed' || result.collection_success === false) && result.error_message" class="truncate" :title="result.error_message">
-                        {{ result.error_message.split('\n')[0].substring(0, 100) }}{{ result.error_message.split('\n')[0].length > 100 ? '...' : '' }}
+                    <td class="px-4 py-3 text-sm relative">
+                      <div v-if="(result.collection_status === 'failed' || result.collection_success === false) && result.error_message" class="relative">
+                        <button
+                          @click.stop="toggleResultError(result.id)"
+                          class="flex items-center text-left text-red-600 hover:text-red-800 transition-colors group w-full"
+                        >
+                          <ExclamationTriangleIcon class="h-4 w-4 mr-1.5 flex-shrink-0" />
+                          <span class="text-xs font-medium truncate flex-1">{{ $t('collections.viewError') }}</span>
+                          <ChevronDownIcon 
+                            class="h-3 w-3 ml-1 flex-shrink-0 transition-transform"
+                            :class="{ 'rotate-180': expandedResultErrors.has(result.id) }"
+                          />
+                        </button>
+                        <Transition
+                          enter-active-class="transition ease-out duration-200"
+                          enter-from-class="opacity-0 transform scale-95"
+                          enter-to-class="opacity-100 transform scale-100"
+                          leave-active-class="transition ease-in duration-150"
+                          leave-from-class="opacity-100 transform scale-100"
+                          leave-to-class="opacity-0 transform scale-95"
+                        >
+                          <div v-if="expandedResultErrors.has(result.id)" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800 break-words whitespace-pre-wrap max-w-full max-h-[200px] overflow-y-auto z-10 relative">
+                            {{ result.error_message }}
+                          </div>
+                        </Transition>
                       </div>
                       <span v-else class="text-gray-400">-</span>
                     </td>
@@ -404,6 +426,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { Transition } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { collectionsApi, type CollectionTask } from '@/api/collections'
 import Modal from '@/components/Modal.vue'
@@ -426,6 +449,8 @@ import {
   PlayIcon,
   DocumentTextIcon,
   MagnifyingGlassIcon,
+  ExclamationTriangleIcon,
+  ChevronDownIcon,
 } from '@heroicons/vue/24/outline'
 
 const toastStore = useToastStore()
@@ -444,6 +469,7 @@ const confirmAction = ref<(() => void) | null>(null)
 const selectedTaskId = ref<number | null>(null)
 const perPage = ref(10)
 const filterText = ref('')
+const expandedResultErrors = ref<Set<number>>(new Set())
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -625,12 +651,21 @@ const filteredResults = computed(() => {
   })
 })
 
+const toggleResultError = (resultId: number) => {
+  if (expandedResultErrors.value.has(resultId)) {
+    expandedResultErrors.value.delete(resultId)
+  } else {
+    expandedResultErrors.value.add(resultId)
+  }
+}
+
 const closeDetailModal = () => {
   showDetailModal.value = false
   stopPollingForTask()
   taskDetail.value = null
   taskResults.value = []
   filterText.value = ''
+  expandedResultErrors.value.clear()
 }
 
 const cancelTask = (id: number) => {

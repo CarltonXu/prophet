@@ -843,8 +843,9 @@
               <td
                 v-for="columnKey in visibleColumns"
                 :key="columnKey"
-                class="px-4 py-4 whitespace-nowrap text-sm transition-colors"
+                class="px-4 py-4 text-sm transition-colors"
                 :class="{
+                  'whitespace-nowrap': columnKey !== 'collection_status',
                   'sticky left-0 bg-white group-hover:bg-gray-50 z-10': columnKey === 'checkbox',
                   'sticky right-0 bg-white group-hover:bg-gray-50 z-10': columnKey === 'operation',
                   'bg-blue-50 group-hover:bg-blue-100': (columnKey === 'checkbox' || columnKey === 'operation') && selectedHosts.includes(host.id!),
@@ -904,17 +905,43 @@
                 </template>
                 <!-- Collection Status -->
                 <template v-else-if="columnKey === 'collection_status'">
-                  <span
-                    :class="getCollectionStatusClass(host.collection_status)"
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                    :title="host.collection_status === 'failed' && host.error_message ? host.error_message : ''"
-                  >
-                    <component
-                      :is="getCollectionStatusIcon(host.collection_status)"
-                      class="h-3.5 w-3.5 mr-1"
-                    />
-                    {{ getCollectionStatusText(host.collection_status) }}
-                  </span>
+                  <div class="flex flex-col gap-1">
+                    <span
+                      :class="getCollectionStatusClass(host.collection_status)"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit"
+                    >
+                      <component
+                        :is="getCollectionStatusIcon(host.collection_status)"
+                        class="h-3.5 w-3.5 mr-1"
+                      />
+                      {{ getCollectionStatusText(host.collection_status) }}
+                    </span>
+                    <div v-if="host.collection_status === 'failed' && host.error_message" class="mt-1">
+                      <button
+                        @click.stop="toggleHostError(host.id)"
+                        class="flex items-center text-xs text-red-600 hover:text-red-800 transition-colors"
+                      >
+                        <ExclamationTriangleIcon class="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span class="truncate max-w-[200px]">{{ $t('hosts.viewError') }}</span>
+                        <ChevronDownIcon 
+                          class="h-3 w-3 ml-1 flex-shrink-0 transition-transform"
+                          :class="{ 'rotate-180': expandedErrors.has(host.id) }"
+                        />
+                      </button>
+                      <Transition
+                        enter-active-class="transition ease-out duration-200"
+                        enter-from-class="opacity-0 transform scale-95"
+                        enter-to-class="opacity-100 transform scale-100"
+                        leave-active-class="transition ease-in duration-150"
+                        leave-from-class="opacity-100 transform scale-100"
+                        leave-to-class="opacity-0 transform scale-95"
+                      >
+                        <div v-if="expandedErrors.has(host.id)" class="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800 break-words whitespace-pre-wrap max-w-full max-h-[200px] overflow-y-auto overflow-x-hidden z-10 relative">
+                          {{ host.error_message }}
+                        </div>
+                      </Transition>
+                    </div>
+                  </div>
                 </template>
                 <!-- Source -->
                 <template v-else-if="columnKey === 'source'">
@@ -2022,7 +2049,7 @@
 </style>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, Transition } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { hostsApi, type Host } from '@/api/hosts'
@@ -2116,6 +2143,7 @@ const treeData = ref<any[]>([])
 // Track expanded/collapsed state for platforms and ESXi hosts
 const expandedPlatforms = ref<Set<number>>(new Set())
 const expandedESXiHosts = ref<Set<string>>(new Set())
+const expandedErrors = ref<Set<number>>(new Set())
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
 const showMissingCredentialsModal = ref(false)
@@ -3265,6 +3293,14 @@ const getCollectionStatusIcon = (status?: string) => {
     'failed': XCircleIcon,
   }
   return iconMap[status || 'not_collected'] || ClockIcon
+}
+
+const toggleHostError = (hostId: number) => {
+  if (expandedErrors.value.has(hostId)) {
+    expandedErrors.value.delete(hostId)
+  } else {
+    expandedErrors.value.add(hostId)
+  }
 }
 
 const getCollectionStatusText = (status?: string) => {

@@ -199,6 +199,7 @@ export default {
     notCollected: '未采集',
     collecting: '采集中',
     completed: '已完成',
+    viewError: '查看错误',
     scan: '扫描',
     platform: '平台',
     manual: '手动',
@@ -512,6 +513,7 @@ export default {
     exportSuccess: '导出成功',
     filterPlaceholder: '搜索 IP、主机名、状态或错误信息...',
     noFilteredResults: '没有匹配的搜索结果',
+    viewError: '查看错误',
   },
   platforms: {
     title: '虚拟化平台',
