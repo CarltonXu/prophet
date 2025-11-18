@@ -82,6 +82,9 @@ export default {
     registerSuccess: 'Registration successful, please login',
     registerFailed: 'Registration failed, please check input information',
     captchaLoadFailed: 'Failed to load captcha',
+    confirmPassword: 'Confirm Password',
+    confirmPasswordPlaceholder: 'Please enter password again',
+    passwordMismatch: 'Passwords do not match',
     platformName: 'Migration and Disaster Recovery Resource Research Platform',
   },
   navigation: {

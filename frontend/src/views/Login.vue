@@ -103,31 +103,7 @@
                   {{ $t('auth.captcha') }}
                 </label>
                 <div class="flex items-center space-x-3">
-                  <div class="flex-1">
-                    <div class="flex items-center space-x-2">
-                      <div class="flex-1 border border-gray-300 rounded-md overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <img
-                          v-if="captcha.image"
-                          :src="captcha.image"
-                          :alt="$t('auth.captcha')"
-                          class="h-10 w-full object-contain cursor-pointer"
-                          @click="loadCaptcha"
-                          :title="$t('auth.captchaClickRefresh')"
-                        />
-                        <div v-else class="h-10 flex items-center justify-center text-gray-400 text-xs">
-                          {{ $t('common.loading') }}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        @click="loadCaptcha"
-                        class="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                      >
-                        {{ $t('auth.captchaRefresh') }}
-                      </button>
-                    </div>
-                  </div>
-                  <div class="w-32 relative">
+                  <div class="flex-1 relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <ShieldCheckIcon class="h-5 w-5 text-gray-400" />
                     </div>
@@ -139,6 +115,29 @@
                       class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase transition-colors"
                       :placeholder="$t('auth.captchaPlaceholder')"
                     />
+                  </div>
+                  <div class="relative">
+                    <div class="border border-gray-300 rounded-md overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors relative group">
+                      <img
+                        v-if="captcha.image"
+                        :src="captcha.image"
+                        :alt="$t('auth.captcha')"
+                        class="h-10 w-24 object-contain cursor-pointer"
+                        @click="loadCaptcha"
+                        :title="$t('auth.captchaClickRefresh')"
+                      />
+                      <div v-else class="h-10 w-24 flex items-center justify-center text-gray-400 text-xs">
+                        {{ $t('common.loading') }}
+                      </div>
+                      <button
+                        type="button"
+                        @click.stop="loadCaptcha"
+                        class="absolute top-0.5 right-0.5 p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors opacity-0 group-hover:opacity-100"
+                        :title="$t('auth.captchaRefresh')"
+                      >
+                        <ArrowPathIcon class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -198,7 +197,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ExclamationCircleIcon, EyeIcon, EyeSlashIcon, UserIcon, LockClosedIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
+import { ExclamationCircleIcon, EyeIcon, EyeSlashIcon, UserIcon, LockClosedIcon, ShieldCheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import { Transition } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18nStore } from '@/stores/i18n'
@@ -239,14 +238,24 @@ const loadCaptcha = async () => {
 }
 
 const handleLogin = async () => {
+  // Prevent multiple submissions
+  if (loading.value) {
+    return
+  }
+  
   error.value = ''
   loading.value = true
   
   try {
-    await authStore.login({
-      ...form.value,
-      captcha_id: captcha.value.captcha_id,
-    })
+    // Ensure we use the correct captcha_id
+    const loginData = {
+      username: form.value.username,
+      password: form.value.password,
+      captcha_id: captcha.value.captcha_id || form.value.captcha_id,
+      captcha_code: form.value.captcha_code.trim().toUpperCase(),
+    }
+    
+    await authStore.login(loginData)
     toastStore.success(t('auth.loginSuccess'))
   } catch (err: any) {
     const errorMessage = typeof err === 'string' ? err : 
@@ -255,6 +264,7 @@ const handleLogin = async () => {
                         t('auth.loginFailed')
     error.value = errorMessage
     toastStore.error(errorMessage)
+    // Reload captcha on error
     loadCaptcha()
   } finally {
     loading.value = false

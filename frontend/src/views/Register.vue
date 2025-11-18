@@ -104,8 +104,10 @@
                     :type="showPassword ? 'text' : 'password'"
                     required
                     autocomplete="new-password"
-                    class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                    class="block w-full pl-10 pr-10 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                    :class="passwordError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'"
                     :placeholder="$t('auth.password')"
+                    @input="validatePasswordMatch"
                   />
                   <button
                     type="button"
@@ -119,35 +121,42 @@
               </div>
               
               <div>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                  {{ $t('auth.confirmPassword') }}
+                </label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LockClosedIcon class="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    v-model="form.confirmPassword"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    class="block w-full pl-10 pr-10 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                    :class="passwordError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'"
+                    :placeholder="$t('auth.confirmPasswordPlaceholder')"
+                    @input="validatePasswordMatch"
+                  />
+                  <button
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                  >
+                    <EyeIcon v-if="!showConfirmPassword" class="h-5 w-5" />
+                    <EyeSlashIcon v-else class="h-5 w-5" />
+                  </button>
+                </div>
+                <p v-if="passwordError" class="mt-1 text-sm text-red-600">{{ passwordError }}</p>
+              </div>
+              
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   {{ $t('auth.captcha') }}
                 </label>
                 <div class="flex items-center space-x-3">
-                  <div class="flex-1">
-                    <div class="flex items-center space-x-2">
-                      <div class="flex-1 border border-gray-300 rounded-md overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <img
-                          v-if="captcha.image"
-                          :src="captcha.image"
-                          :alt="$t('auth.captcha')"
-                          class="h-10 w-full object-contain cursor-pointer"
-                          @click="loadCaptcha"
-                          :title="$t('auth.captchaClickRefresh')"
-                        />
-                        <div v-else class="h-10 flex items-center justify-center text-gray-400 text-xs">
-                          {{ $t('common.loading') }}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        @click="loadCaptcha"
-                        class="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                      >
-                        {{ $t('auth.captchaRefresh') }}
-                      </button>
-                    </div>
-                  </div>
-                  <div class="w-32 relative">
+                  <div class="flex-1 relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <ShieldCheckIcon class="h-5 w-5 text-gray-400" />
                     </div>
@@ -159,6 +168,29 @@
                       class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase transition-colors"
                       :placeholder="$t('auth.captchaPlaceholder')"
                     />
+                  </div>
+                  <div class="relative">
+                    <div class="border border-gray-300 rounded-md overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors relative group">
+                      <img
+                        v-if="captcha.image"
+                        :src="captcha.image"
+                        :alt="$t('auth.captcha')"
+                        class="h-10 w-24 object-contain cursor-pointer"
+                        @click="loadCaptcha"
+                        :title="$t('auth.captchaClickRefresh')"
+                      />
+                      <div v-else class="h-10 w-24 flex items-center justify-center text-gray-400 text-xs">
+                        {{ $t('common.loading') }}
+                      </div>
+                      <button
+                        type="button"
+                        @click.stop="loadCaptcha"
+                        class="absolute top-0.5 right-0.5 p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors opacity-0 group-hover:opacity-100"
+                        :title="$t('auth.captchaRefresh')"
+                      >
+                        <ArrowPathIcon class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -219,7 +251,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ExclamationCircleIcon, EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
+import { ExclamationCircleIcon, EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon, ShieldCheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import { Transition } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18nStore } from '@/stores/i18n'
@@ -237,6 +269,7 @@ const form = ref({
   username: '',
   email: '',
   password: '',
+  confirmPassword: '',
   captcha_id: '',
   captcha_code: '',
 })
@@ -249,6 +282,8 @@ const captcha = ref({
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const passwordError = ref('')
 
 const loadCaptcha = async () => {
   try {
@@ -261,15 +296,50 @@ const loadCaptcha = async () => {
   }
 }
 
+const validatePasswordMatch = () => {
+  // Clear error if either field is empty
+  if (!form.value.password || !form.value.confirmPassword) {
+    passwordError.value = ''
+    return
+  }
+  
+  // Check if passwords match
+  if (form.value.password !== form.value.confirmPassword) {
+    passwordError.value = t('auth.passwordMismatch')
+  } else {
+    passwordError.value = ''
+  }
+}
+
 const handleRegister = async () => {
   error.value = ''
+  passwordError.value = ''
+  
+  // Validate password match
+  if (form.value.password !== form.value.confirmPassword) {
+    passwordError.value = t('auth.passwordMismatch')
+    toastStore.error(t('auth.passwordMismatch'))
+    return
+  }
+  
+  // Prevent multiple submissions
+  if (loading.value) {
+    return
+  }
+  
   loading.value = true
   
   try {
-    await authStore.register({
-      ...form.value,
-      captcha_id: captcha.value.captcha_id,
-    })
+    // Ensure we use the correct captcha_id
+    const registerData = {
+      username: form.value.username,
+      email: form.value.email,
+      password: form.value.password,
+      captcha_id: captcha.value.captcha_id || form.value.captcha_id,
+      captcha_code: form.value.captcha_code.trim().toUpperCase(),
+    }
+    
+    await authStore.register(registerData)
     toastStore.success(t('auth.registerSuccess'))
     router.push('/login')
   } catch (err: any) {

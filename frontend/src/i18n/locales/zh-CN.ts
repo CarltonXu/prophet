@@ -82,6 +82,9 @@ export default {
     registerSuccess: '注册成功，请登录',
     registerFailed: '注册失败，请检查输入信息',
     captchaLoadFailed: '加载验证码失败',
+    confirmPassword: '确认密码',
+    confirmPasswordPlaceholder: '请再次输入密码',
+    passwordMismatch: '两次输入的密码不一致',
     platformName: '迁移和容灾资源调研平台',
   },
   navigation: {
