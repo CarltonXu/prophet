@@ -466,6 +466,11 @@ export default {
     hostAlreadyExists: 'Host {ip} already exists',
     noSelectedItems: 'Please select at least one item',
     allSelectedAlreadyAdded: 'All selected items have already been added',
+    exportExcel: 'Export Excel',
+    exporting: 'Exporting...',
+    exportSuccess: 'Successfully exported {count} records',
+    exportFailed: 'Export failed',
+    noResultsToExport: 'No results to export',
   },
   collections: {
     title: 'Collection Tasks',

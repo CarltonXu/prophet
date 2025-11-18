@@ -203,6 +203,15 @@
           <div class="flex items-center space-x-2">
             <button
               v-if="filteredResults.length > 0"
+              @click="exportToExcel"
+              :disabled="exporting"
+              class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <ArrowDownTrayIcon :class="{ 'animate-pulse': exporting }" class="h-4 w-4 mr-2" />
+              {{ exporting ? $t('scans.exporting') : $t('scans.exportExcel') }}
+            </button>
+            <button
+              v-if="filteredResults.length > 0"
               @click="toggleSelectAll"
               class="text-sm text-blue-600 hover:text-blue-800"
             >
@@ -334,7 +343,8 @@ import Modal from '@/components/Modal.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { useToastStore } from '@/stores/toast'
 import { useSettingsStore } from '@/stores/settings'
-import { EyeIcon, MagnifyingGlassIcon, PlusIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, MagnifyingGlassIcon, PlusIcon, ArrowPathIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline'
+import * as XLSX from 'xlsx'
 
 const { t } = useI18n()
 
@@ -358,6 +368,7 @@ const filterText = ref('')
 const selectedResultIds = ref<Set<string>>(new Set())
 const addedResultIds = ref<Set<string>>(new Set())
 const adding = ref(false)
+const exporting = ref(false)
 const existingHosts = ref<Set<string>>(new Set())
 const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
@@ -566,46 +577,6 @@ const closeResultsModal = () => {
   existingHosts.value.clear()
 }
 
-const addToHosts = async (result: any) => {
-  try {
-    // Validate IP
-    if (!result.ip || !result.ip.trim()) {
-      toastStore.error(t('scans.invalidIp'))
-      return
-    }
-    
-    // Check if already exists
-    if (existingHosts.value.has(result.ip)) {
-      toastStore.error(t('scans.hostAlreadyExists', { ip: result.ip }))
-      return
-    }
-    
-    await hostsApi.createHost({
-      ip: result.ip,
-      hostname: result.hostname,
-      mac: result.mac,
-      vendor: result.vendor,
-      os_type: (result.os_type || result.os)?.toLowerCase(),
-    })
-    
-    // Mark as added
-    addedResultIds.value.add(getResultKey(result))
-    existingHosts.value.add(result.ip)
-    selectedResultIds.value.delete(getResultKey(result))
-    
-    toastStore.success(t('scans.addSuccess'))
-  } catch (error: any) {
-    const errorMsg = error.response?.data?.message || t('scans.addFailed')
-    toastStore.error(errorMsg)
-    
-    // If host already exists, mark it as added
-    if (errorMsg.includes('already exists') || errorMsg.includes('已存在')) {
-      addedResultIds.value.add(getResultKey(result))
-      existingHosts.value.add(result.ip)
-    }
-  }
-}
-
 const batchAddToHosts = async () => {
   if (selectedResults.value.length === 0) {
     toastStore.error(t('scans.noSelectedItems'))
@@ -660,6 +631,85 @@ const batchAddToHosts = async () => {
     // For now, we'll just show the error
   } finally {
     adding.value = false
+  }
+}
+
+const exportToExcel = () => {
+  if (filteredResults.value.length === 0) {
+    toastStore.warning(t('scans.noResultsToExport'))
+    return
+  }
+  
+  exporting.value = true
+  try {
+    // Prepare data for export
+    const exportData = filteredResults.value.map((result: any) => {
+      // Format ports
+      let ports = '-'
+      if (result.scan_ports) {
+        const portParts: string[] = []
+        if (result.scan_ports.tcp && result.scan_ports.tcp.length > 0) {
+          portParts.push(`TCP: ${result.scan_ports.tcp.join(', ')}`)
+        }
+        if (result.scan_ports.udp && result.scan_ports.udp.length > 0) {
+          portParts.push(`UDP: ${result.scan_ports.udp.join(', ')}`)
+        }
+        if (portParts.length > 0) {
+          ports = portParts.join('; ')
+        }
+      }
+      
+      // Format status
+      let status = t('scans.pending')
+      if (isAdded(result)) {
+        status = t('scans.alreadyAdded')
+      } else if (isSelected(result)) {
+        status = t('scans.selected')
+      }
+      
+      return {
+        [t('hosts.ip')]: result.ip || '-',
+        [t('hosts.hostname')]: result.hostname || '-',
+        'MAC': result.mac || '-',
+        [t('scans.vendor')]: result.vendor || '-',
+        'OS': result.os_type || '-',
+        [t('scans.ports')]: ports,
+        [t('common.status')]: status,
+      }
+    })
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(exportData)
+    
+    // Set column widths
+    const colWidths = [
+      { wch: 18 }, // IP
+      { wch: 20 }, // Hostname
+      { wch: 18 }, // MAC
+      { wch: 20 }, // Vendor
+      { wch: 15 }, // OS
+      { wch: 40 }, // Ports
+      { wch: 12 }, // Status
+    ]
+    ws['!cols'] = colWidths
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, t('scans.resultsTitle'))
+    
+    // Generate filename with current date
+    const dateStr = new Date().toISOString().split('T')[0]
+    const filename = `scan_results_${dateStr}.xlsx`
+    
+    // Write file
+    XLSX.writeFile(wb, filename)
+    
+    toastStore.success(t('scans.exportSuccess', { count: exportData.length }))
+  } catch (error: any) {
+    console.error('Export error:', error)
+    toastStore.error(t('scans.exportFailed'))
+  } finally {
+    exporting.value = false
   }
 }
 

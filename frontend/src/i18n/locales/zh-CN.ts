@@ -466,6 +466,11 @@ export default {
     hostAlreadyExists: '主机 {ip} 已存在',
     noSelectedItems: '请至少选择一项',
     allSelectedAlreadyAdded: '所选项目已全部添加',
+    exportExcel: '导出Excel',
+    exporting: '导出中...',
+    exportSuccess: '成功导出 {count} 条记录',
+    exportFailed: '导出失败',
+    noResultsToExport: '没有可导出的结果',
   },
   collections: {
     title: '采集任务',
