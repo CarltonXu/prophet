@@ -237,34 +237,104 @@ class CollectorService:
                         if result:
                             completed += 1
                             successful_hosts.add(host_id)
+                            logger.debug(f"Host {host_id} collection completed successfully")
                         else:
                             failed += 1
                             failed_hosts.add(host_id)
+                            logger.debug(f"Host {host_id} collection failed (returned False)")
                     except Exception as e:
                         logger.error(f"Error collecting host {host_id}: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
                         failed += 1
                         failed_hosts.add(host_id)
+                        # Ensure host status is set to failed even if exception occurred
+                        try:
+                            host = Host.query.get(host_id)
+                            if host and host.collection_status != 'failed':
+                                host.collection_status = 'failed'
+                                # Check if error detail already exists
+                                existing_detail = HostDetail.query.filter_by(
+                                    host_id=host.id,
+                                    status='failed'
+                                ).order_by(HostDetail.collected_at.desc()).first()
+                                if not existing_detail:
+                                    host_detail = HostDetail(
+                                        host_id=host.id,
+                                        details='',
+                                        status='failed',
+                                        collection_method=host.os_type.lower() if host.os_type else 'unknown',
+                                        error_message=f"Collection task exception: {str(e)[:500]}",
+                                    )
+                                    db.session.add(host_detail)
+                                db.session.commit()
+                        except Exception as status_update_error:
+                            logger.error(f"Failed to update host {host_id} status after exception: {status_update_error}")
+                            db.session.rollback()
                     
                     # Update progress
                     running = len([f for f in futures if not f.done()])
                     self.update_progress(completed=completed, failed=failed, running=running)
             
             # Ensure host statuses are synchronized with results
+            # This is critical to ensure no hosts are left in 'collecting' or 'pending' state
             try:
+                processed_hosts = successful_hosts | failed_hosts
                 for host_id in host_ids:
                     host = Host.query.get(host_id)
                     if not host:
+                        logger.warning(f"Host {host_id} not found during status synchronization")
                         continue
+                    
+                    # Check if host was processed
                     if host_id in successful_hosts:
-                        host.collection_status = 'completed'
+                        # Host was successfully collected
+                        if host.collection_status != 'completed':
+                            logger.info(f"Updating host {host_id} ({host.ip}) status to 'completed'")
+                            host.collection_status = 'completed'
                     elif host_id in failed_hosts:
+                        # Host collection failed
+                        if host.collection_status != 'failed':
+                            logger.info(f"Updating host {host_id} ({host.ip}) status to 'failed'")
+                            host.collection_status = 'failed'
+                    elif host_id not in processed_hosts:
+                        # Host was not processed at all (should not happen, but handle it)
+                        logger.warning(f"Host {host_id} ({host.ip}) was not processed, marking as failed")
                         host.collection_status = 'failed'
+                        # Create a failure record
+                        host_detail = HostDetail(
+                            host_id=host.id,
+                            details='',
+                            status='failed',
+                            collection_method=host.os_type.lower() if host.os_type else 'unknown',
+                            error_message='Host was not processed during collection task execution',
+                        )
+                        db.session.add(host_detail)
                     elif host.collection_status == 'collecting':
-                        # Host did not finish processing -> mark as failed
+                        # Host was marked as collecting but didn't finish -> mark as failed
+                        logger.warning(f"Host {host_id} ({host.ip}) was still in 'collecting' state, marking as failed")
                         host.collection_status = 'failed'
+                        # Create a failure record if one doesn't exist
+                        existing_detail = HostDetail.query.filter_by(
+                            host_id=host.id,
+                            status='failed'
+                        ).order_by(HostDetail.collected_at.desc()).first()
+                        if not existing_detail:
+                            host_detail = HostDetail(
+                                host_id=host.id,
+                                details='',
+                                status='failed',
+                                collection_method=host.os_type.lower() if host.os_type else 'unknown',
+                                error_message='Collection task did not complete for this host',
+                            )
+                            db.session.add(host_detail)
+                
                 db.session.commit()
+                logger.info(f"Status synchronization completed. Successful: {len(successful_hosts)}, Failed: {len(failed_hosts)}, Total: {len(host_ids)}")
             except Exception as status_error:
                 logger.error(f"Failed to synchronize host statuses after collection: {status_error}")
+                import traceback
+                logger.error(traceback.format_exc())
                 db.session.rollback()
             
             # Update task status based on results
