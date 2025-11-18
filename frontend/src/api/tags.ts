@@ -5,6 +5,7 @@ export interface Tag {
   name: string
   color?: string
   description?: string
+  host_count?: number
 }
 
 export const tagsApi = {
@@ -27,5 +28,16 @@ export const tagsApi = {
   
   removePlatformTag: (platformId: number, tagId: number) =>
     apiClient.delete(`/tags/platforms/${platformId}/${tagId}`),
+  
+  getTagHosts: (tagId: number, page?: number, perPage?: number, search?: string) => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (perPage) params.append('per_page', perPage.toString())
+    if (search) params.append('search', search)
+    return apiClient.get(`/tags/${tagId}/hosts?${params.toString()}`)
+  },
+  
+  batchRemoveTagHosts: (tagId: number, hostIds: number[]) =>
+    apiClient.post(`/tags/${tagId}/hosts/batch-remove`, { host_ids: hostIds }),
 }
 
