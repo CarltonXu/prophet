@@ -67,7 +67,7 @@ import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } fro
 interface Props {
   open: boolean
   title?: string
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '6xl' | 'full'
   showFooter?: boolean
   closeOnBackdrop?: boolean
 }
@@ -89,7 +89,9 @@ const maxWidthClass = {
   lg: 'sm:max-w-lg',
   xl: 'sm:max-w-xl',
   '2xl': 'sm:max-w-2xl',
-  full: 'sm:max-w-full',
+  '4xl': 'sm:max-w-4xl',
+  '6xl': 'sm:max-w-6xl',
+  full: 'sm:max-w-full sm:mx-4',
 }[props.maxWidth]
 
 const handleClose = () => {

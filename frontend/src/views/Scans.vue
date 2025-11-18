@@ -191,56 +191,116 @@
     </Modal>
 
     <!-- Results Modal -->
-    <Modal :open="showResultsModal" @close="closeResultsModal" :title="$t('scans.resultsTitle')" max-width="2xl">
+    <Modal :open="showResultsModal" @close="closeResultsModal" :title="$t('scans.resultsTitle')" max-width="6xl">
       <div v-if="scanResults" class="space-y-4">
-        <div class="text-sm text-gray-600">
-          {{ $t('scans.foundHosts', { count: scanResults.length }) }}
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-600">
+            {{ $t('scans.foundHosts', { count: filteredResults.length }) }}
+            <span v-if="selectedResults.length > 0" class="ml-2 text-blue-600 font-medium">
+              ({{ $t('scans.selectedCount', { count: selectedResults.length }) }})
+            </span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button
+              v-if="filteredResults.length > 0"
+              @click="toggleSelectAll"
+              class="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {{ isAllSelected ? $t('scans.deselectAll') : $t('scans.selectAll') }}
+            </button>
+          </div>
         </div>
-        <div class="max-h-96 overflow-y-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50 sticky top-0 z-10">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.ip') }}</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('hosts.hostname') }}</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAC</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('scans.vendor') }}</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">OS</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('scans.ports') }}</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ $t('common.operation') }}</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="(result, index) in scanResults" :key="index" class="hover:bg-gray-50">
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ result.ip }}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.hostname || '-' }}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.mac || '-' }}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.vendor || '-' }}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.os_type || '-' }}</td>
-                <td class="px-4 py-3 text-sm text-gray-500">
-                  <div v-if="result.scan_ports" class="flex flex-col gap-1">
-                    <span v-if="result.scan_ports.tcp && result.scan_ports.tcp.length > 0" class="text-xs">
-                      <span class="font-medium text-blue-600">TCP:</span> {{ result.scan_ports.tcp.join(', ') }}
+        
+        <!-- Filter Input -->
+        <div class="relative">
+          <input
+            v-model="filterText"
+            type="text"
+            :placeholder="$t('scans.filterPlaceholder')"
+            class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <MagnifyingGlassIcon class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+        </div>
+
+        <!-- Table Container with Fixed Header -->
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="max-h-[60vh] overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                    <input
+                      ref="selectAllCheckbox"
+                      type="checkbox"
+                      :checked="isAllSelected && filteredResults.length > 0"
+                      @change="toggleSelectAll"
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.ip') }}</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('hosts.hostname') }}</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">MAC</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('scans.vendor') }}</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">OS</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">{{ $t('scans.ports') }}</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{{ $t('common.status') }}</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-if="filteredResults.length === 0" class="text-center">
+                  <td colspan="8" class="px-4 py-8 text-gray-500">
+                    {{ filterText ? $t('scans.noFilteredResults') : $t('scans.noResults') }}
+                  </td>
+                </tr>
+                <tr 
+                  v-for="(result, index) in filteredResults" 
+                  :key="index" 
+                  class="hover:bg-gray-50 transition-colors"
+                  :class="{ 'bg-blue-50': isSelected(result) }"
+                >
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      :checked="isSelected(result)"
+                      :disabled="isAdded(result)"
+                      @change="toggleSelect(result)"
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">{{ result.ip }}</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.hostname || '-' }}</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.mac || '-' }}</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.vendor || '-' }}</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ result.os_type || '-' }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-500">
+                    <div v-if="result.scan_ports" class="flex flex-col gap-1">
+                      <span v-if="result.scan_ports.tcp && result.scan_ports.tcp.length > 0" class="text-xs">
+                        <span class="font-medium text-blue-600">TCP:</span> {{ result.scan_ports.tcp.join(', ') }}
+                      </span>
+                      <span v-if="result.scan_ports.udp && result.scan_ports.udp.length > 0" class="text-xs">
+                        <span class="font-medium text-green-600">UDP:</span> {{ result.scan_ports.udp.join(', ') }}
+                      </span>
+                      <span v-if="(!result.scan_ports.tcp || result.scan_ports.tcp.length === 0) && (!result.scan_ports.udp || result.scan_ports.udp.length === 0)" class="text-xs text-gray-400">
+                        -
+                      </span>
+                    </div>
+                    <span v-else class="text-xs text-gray-400">-</span>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    <span v-if="isAdded(result)" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                      {{ $t('scans.alreadyAdded') }}
                     </span>
-                    <span v-if="result.scan_ports.udp && result.scan_ports.udp.length > 0" class="text-xs">
-                      <span class="font-medium text-green-600">UDP:</span> {{ result.scan_ports.udp.join(', ') }}
+                    <span v-else-if="isSelected(result)" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      {{ $t('scans.selected') }}
                     </span>
-                    <span v-if="(!result.scan_ports.tcp || result.scan_ports.tcp.length === 0) && (!result.scan_ports.udp || result.scan_ports.udp.length === 0)" class="text-xs text-gray-400">
-                      -
+                    <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                      {{ $t('scans.pending') }}
                     </span>
-                  </div>
-                  <span v-else class="text-xs text-gray-400">-</span>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                  <button
-                    @click="addToHosts(result)"
-                    class="text-blue-600 hover:text-blue-900"
-                  >
-                    {{ $t('scans.addToHosts') }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -252,12 +312,13 @@
           {{ $t('common.close') }}
         </button>
         <button
-          v-if="scanResults && scanResults.length > 0"
+          v-if="selectedResults.length > 0"
           type="button"
           @click="batchAddToHosts"
-          class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto"
+          :disabled="adding"
+          class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {{ $t('scans.batchAddToHosts') }}
+          {{ adding ? $t('scans.adding') : $t('scans.addSelected', { count: selectedResults.length }) }}
         </button>
       </template>
     </Modal>
@@ -265,7 +326,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scansApi, type ScanTask } from '@/api/scans'
 import { hostsApi } from '@/api/hosts'
@@ -291,6 +352,14 @@ const currentTaskId = ref<number | null>(null)
 const selectedTaskId = ref<number | null>(null)
 const pagination = ref<any>(null)
 const perPage = ref(settingsStore.defaultPageSize)
+
+// New state for results modal
+const filterText = ref('')
+const selectedResultIds = ref<Set<string>>(new Set())
+const addedResultIds = ref<Set<string>>(new Set())
+const adding = ref(false)
+const existingHosts = ref<Set<string>>(new Set())
+const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -365,11 +434,122 @@ const createTask = async () => {
   }
 }
 
+// Computed properties for filtered and selected results
+const filteredResults = computed(() => {
+  if (!filterText.value.trim()) {
+    return scanResults.value
+  }
+  const searchTerm = filterText.value.toLowerCase()
+  return scanResults.value.filter((result: any) => {
+    return (
+      result.ip?.toLowerCase().includes(searchTerm) ||
+      result.hostname?.toLowerCase().includes(searchTerm) ||
+      result.mac?.toLowerCase().includes(searchTerm) ||
+      result.vendor?.toLowerCase().includes(searchTerm) ||
+      result.os_type?.toLowerCase().includes(searchTerm) ||
+      result.scan_ports?.tcp?.some((port: any) => String(port).includes(searchTerm)) ||
+      result.scan_ports?.udp?.some((port: any) => String(port).includes(searchTerm))
+    )
+  })
+})
+
+const selectedResults = computed(() => {
+  return filteredResults.value.filter((result: any) => 
+    selectedResultIds.value.has(getResultKey(result))
+  )
+})
+
+const isAllSelected = computed(() => {
+  const selectableResults = filteredResults.value.filter((r: any) => !isAdded(r))
+  return selectableResults.length > 0 && 
+         selectableResults.every((r: any) => selectedResultIds.value.has(getResultKey(r)))
+})
+
+const isIndeterminate = computed(() => {
+  const selectableResults = filteredResults.value.filter((r: any) => !isAdded(r))
+  const selectedCount = selectableResults.filter((r: any) => 
+    selectedResultIds.value.has(getResultKey(r))
+  ).length
+  return selectableResults.length > 0 && selectedCount > 0 && selectedCount < selectableResults.length
+})
+
+// Watch for indeterminate state changes
+watch([isIndeterminate, filteredResults, showResultsModal], () => {
+  if (!showResultsModal.value) return
+  nextTick(() => {
+    if (selectAllCheckbox.value) {
+      selectAllCheckbox.value.indeterminate = isIndeterminate.value
+    }
+  })
+}, { immediate: true })
+
+// Helper functions
+const getResultKey = (result: any) => {
+  return result.ip || `${result.hostname}-${result.mac}`
+}
+
+const isSelected = (result: any) => {
+  return selectedResultIds.value.has(getResultKey(result))
+}
+
+const isAdded = (result: any) => {
+  return addedResultIds.value.has(getResultKey(result))
+}
+
+const toggleSelect = (result: any) => {
+  if (isAdded(result)) return
+  const key = getResultKey(result)
+  if (selectedResultIds.value.has(key)) {
+    selectedResultIds.value.delete(key)
+  } else {
+    selectedResultIds.value.add(key)
+  }
+}
+
+const toggleSelectAll = () => {
+  const selectableResults = filteredResults.value.filter((r: any) => !isAdded(r))
+  if (isAllSelected.value) {
+    selectableResults.forEach((r: any) => {
+      selectedResultIds.value.delete(getResultKey(r))
+    })
+  } else {
+    selectableResults.forEach((r: any) => {
+      selectedResultIds.value.add(getResultKey(r))
+    })
+  }
+}
+
+// Check existing hosts
+const checkExistingHosts = async () => {
+  try {
+    const response: any = await hostsApi.getHosts({ per_page: 10000 })
+    const hosts = response?.data || []
+    existingHosts.value = new Set(hosts.map((host: any) => host.ip))
+    
+    // Mark existing hosts as added
+    scanResults.value.forEach((result: any) => {
+      if (existingHosts.value.has(result.ip)) {
+        addedResultIds.value.add(getResultKey(result))
+      }
+    })
+  } catch (error: any) {
+    console.error('Failed to check existing hosts:', error)
+  }
+}
+
 const viewResults = async (id: number) => {
   currentTaskId.value = id
   try {
     const response = await scansApi.getScanResults(id)
     scanResults.value = response.data || []
+    
+    // Reset selection and filter
+    selectedResultIds.value.clear()
+    filterText.value = ''
+    
+    // Check existing hosts
+    await checkExistingHosts()
+    
     showResultsModal.value = true
   } catch (error: any) {
     toastStore.error(error.response?.data?.message || t('messages.loadFailed'))
@@ -380,10 +560,26 @@ const closeResultsModal = () => {
   showResultsModal.value = false
   scanResults.value = []
   currentTaskId.value = null
+  selectedResultIds.value.clear()
+  filterText.value = ''
+  addedResultIds.value.clear()
+  existingHosts.value.clear()
 }
 
 const addToHosts = async (result: any) => {
   try {
+    // Validate IP
+    if (!result.ip || !result.ip.trim()) {
+      toastStore.error(t('scans.invalidIp'))
+      return
+    }
+    
+    // Check if already exists
+    if (existingHosts.value.has(result.ip)) {
+      toastStore.error(t('scans.hostAlreadyExists', { ip: result.ip }))
+      return
+    }
+    
     await hostsApi.createHost({
       ip: result.ip,
       hostname: result.hostname,
@@ -391,27 +587,79 @@ const addToHosts = async (result: any) => {
       vendor: result.vendor,
       os_type: (result.os_type || result.os)?.toLowerCase(),
     })
+    
+    // Mark as added
+    addedResultIds.value.add(getResultKey(result))
+    existingHosts.value.add(result.ip)
+    selectedResultIds.value.delete(getResultKey(result))
+    
     toastStore.success(t('scans.addSuccess'))
   } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('scans.addFailed'))
+    const errorMsg = error.response?.data?.message || t('scans.addFailed')
+    toastStore.error(errorMsg)
+    
+    // If host already exists, mark it as added
+    if (errorMsg.includes('already exists') || errorMsg.includes('已存在')) {
+      addedResultIds.value.add(getResultKey(result))
+      existingHosts.value.add(result.ip)
+    }
   }
 }
 
 const batchAddToHosts = async () => {
-  if (!scanResults.value || scanResults.value.length === 0) return
+  if (selectedResults.value.length === 0) {
+    toastStore.error(t('scans.noSelectedItems'))
+    return
+  }
+  
+  adding.value = true
   try {
-    const hosts = scanResults.value.map((result: any) => ({
-      ip: result.ip,
-      hostname: result.hostname,
-      mac: result.mac,
-      vendor: result.vendor,
-      os_type: (result.os_type || result.os)?.toLowerCase(),
-    }))
-    await hostsApi.batchCreateHosts(hosts)
-    toastStore.success(t('scans.batchAddSuccess', { count: hosts.length }))
-    closeResultsModal()
+    // Validate all selected results
+    const invalidResults = selectedResults.value.filter((r: any) => !r.ip || !r.ip.trim())
+    if (invalidResults.length > 0) {
+      toastStore.error(t('scans.invalidIp'))
+      adding.value = false
+      return
+    }
+    
+    // Filter out already added hosts
+    const hostsToAdd = selectedResults.value
+      .filter((result: any) => !isAdded(result))
+      .map((result: any) => ({
+        ip: result.ip,
+        hostname: result.hostname,
+        mac: result.mac,
+        vendor: result.vendor,
+        os_type: (result.os_type || result.os)?.toLowerCase(),
+      }))
+    
+    if (hostsToAdd.length === 0) {
+      toastStore.warning(t('scans.allSelectedAlreadyAdded'))
+      adding.value = false
+      return
+    }
+    
+    await hostsApi.batchCreateHosts(hostsToAdd)
+    
+    // Mark all successfully added hosts
+    selectedResults.value.forEach((result: any) => {
+      if (!isAdded(result)) {
+        addedResultIds.value.add(getResultKey(result))
+        existingHosts.value.add(result.ip)
+        selectedResultIds.value.delete(getResultKey(result))
+      }
+    })
+    
+    toastStore.success(t('scans.batchAddSuccess', { count: hostsToAdd.length }))
   } catch (error: any) {
-    toastStore.error(error.response?.data?.message || t('scans.batchAddFailed'))
+    const errorMsg = error.response?.data?.message || t('scans.batchAddFailed')
+    toastStore.error(errorMsg)
+    
+    // Try to parse which hosts were successfully added
+    // If the error contains information about successful additions, we can update the state
+    // For now, we'll just show the error
+  } finally {
+    adding.value = false
   }
 }
 
